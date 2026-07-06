@@ -6,6 +6,7 @@ import {
   CardContent,
   Chip,
   Container,
+  MenuItem,
   Stack,
   Table,
   TableBody,
@@ -13,6 +14,7 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  TextField,
   ToggleButton,
   ToggleButtonGroup,
   Typography,
@@ -25,6 +27,8 @@ import { coverageRows, type CoverageView } from "../data/sampleCoverage";
 
 export default function Dashboard() {
   const [view, setView] = useState<CoverageView>("calls");
+  const [search, setSearch] = useState("");
+  const [serviceFilter, setServiceFilter] = useState("All");
 
   const today = new Date();
 
@@ -40,10 +44,22 @@ export default function Dashboard() {
     minute: "2-digit",
   });
 
-  const rows = useMemo(
-    () => coverageRows.filter((row) => row.view.includes(view)),
-    [view]
-  );
+  const services = useMemo(() => {
+    const visibleRows = coverageRows.filter((row) => row.view.includes(view));
+    return ["All", ...Array.from(new Set(visibleRows.map((row) => row.service)))];
+  }, [view]);
+
+  const rows = useMemo(() => {
+    return coverageRows.filter((row) => {
+      const matchesView = row.view.includes(view);
+      const matchesService =
+        serviceFilter === "All" || row.service === serviceFilter;
+      const searchText = `${row.service} ${row.shift} ${row.name} ${row.training} ${row.contact} ${row.note ?? ""}`.toLowerCase();
+      const matchesSearch = searchText.includes(search.toLowerCase());
+
+      return matchesView && matchesService && matchesSearch;
+    });
+  }, [view, serviceFilter, search]);
 
   return (
     <Box sx={{ bgcolor: "#f5f7fb", minHeight: "100vh", py: 4 }}>
@@ -71,7 +87,11 @@ export default function Dashboard() {
                     exclusive
                     value={view}
                     onChange={(_, nextView) => {
-                      if (nextView) setView(nextView);
+                      if (nextView) {
+                        setView(nextView);
+                        setServiceFilter("All");
+                        setSearch("");
+                      }
                     }}
                     size="small"
                   >
@@ -103,38 +123,63 @@ export default function Dashboard() {
                     Edit Schedule
                   </Button>
                 </Stack>
+
+                <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
+                  <TextField
+                    size="small"
+                    label="Search name, service, pager"
+                    value={search}
+                    onChange={(event) => setSearch(event.target.value)}
+                    sx={{ minWidth: 280 }}
+                  />
+
+                  <TextField
+                    select
+                    size="small"
+                    label="Service"
+                    value={serviceFilter}
+                    onChange={(event) => setServiceFilter(event.target.value)}
+                    sx={{ minWidth: 220 }}
+                  >
+                    {services.map((service) => (
+                      <MenuItem key={service} value={service}>
+                        {service}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                </Stack>
               </Stack>
             </CardContent>
           </Card>
 
           <Card>
             <CardContent>
-              <Typography variant="h6" fontWeight={700} gutterBottom>
-                {view === "calls" ? "Call Schedule" : "All Services"}
-              </Typography>
+              <Stack
+                direction={{ xs: "column", md: "row" }}
+                justifyContent="space-between"
+                alignItems={{ xs: "flex-start", md: "center" }}
+                spacing={1}
+                sx={{ mb: 2 }}
+              >
+                <Typography variant="h6" fontWeight={700}>
+                  {view === "calls" ? "Call Schedule" : "All Services"}
+                </Typography>
+
+                <Typography color="text.secondary">
+                  Showing {rows.length} assignment{rows.length === 1 ? "" : "s"}
+                </Typography>
+              </Stack>
 
               <TableContainer>
                 <Table>
                   <TableHead>
                     <TableRow>
-                      <TableCell>
-                        <strong>Service</strong>
-                      </TableCell>
-                      <TableCell>
-                        <strong>Shift</strong>
-                      </TableCell>
-                      <TableCell>
-                        <strong>Name</strong>
-                      </TableCell>
-                      <TableCell>
-                        <strong>Training</strong>
-                      </TableCell>
-                      <TableCell>
-                        <strong>Contact</strong>
-                      </TableCell>
-                      <TableCell>
-                        <strong>Message</strong>
-                      </TableCell>
+                      <TableCell><strong>Service</strong></TableCell>
+                      <TableCell><strong>Shift</strong></TableCell>
+                      <TableCell><strong>Name</strong></TableCell>
+                      <TableCell><strong>Training</strong></TableCell>
+                      <TableCell><strong>Contact</strong></TableCell>
+                      <TableCell><strong>Message</strong></TableCell>
                     </TableRow>
                   </TableHead>
 
@@ -185,6 +230,16 @@ export default function Dashboard() {
                         </TableCell>
                       </TableRow>
                     ))}
+
+                    {rows.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={6}>
+                          <Typography color="text.secondary" sx={{ py: 3 }}>
+                            No matching assignments found.
+                          </Typography>
+                        </TableCell>
+                      </TableRow>
+                    )}
                   </TableBody>
                 </Table>
               </TableContainer>
