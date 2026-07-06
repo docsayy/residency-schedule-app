@@ -1,10 +1,19 @@
 import { BrowserRouter, Link, Route, Routes } from "react-router-dom";
-import { AppBar, Button, CssBaseline, Toolbar, Typography } from "@mui/material";
+import {
+  AppBar,
+  Button,
+  CssBaseline,
+  Toolbar,
+  Typography,
+} from "@mui/material";
 import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
+
 import Dashboard from "./pages/Dashboard";
 import BlockSchedule from "./pages/BlockSchedule";
+import Login from "./pages/Login";
+import AdminResidents from "./pages/AdminResidents";
 
-function App() {
+export default function App() {
   return (
     <BrowserRouter>
       <CssBaseline />
@@ -17,24 +26,20 @@ function App() {
             Residency Scheduler
           </Typography>
 
-          <Button color="inherit" component={Link} to="/block-schedule">
-            Block Schedule
-          </Button>
-
           <Button color="inherit" component={Link} to="/">
             Who&apos;s On
           </Button>
 
-          <Button color="inherit" component={Link} to="/my-schedule">
-            My Schedule
+          <Button color="inherit" component={Link} to="/block-schedule">
+            Block Schedule
           </Button>
 
-          <Button color="inherit" component={Link} to="/special-requests">
-            Special Requests
+          <Button color="inherit" component={Link} to="/admin/residents">
+            Residents
           </Button>
 
-          <Button color="inherit" component={Link} to="/send-page">
-            Send a Page
+          <Button color="inherit" component={Link} to="/login">
+            Login
           </Button>
         </Toolbar>
       </AppBar>
@@ -42,21 +47,9 @@ function App() {
       <Routes>
         <Route path="/" element={<Dashboard />} />
         <Route path="/block-schedule" element={<BlockSchedule />} />
-        <Route path="/my-schedule" element={<PlaceholderPage title="My Schedule" />} />
-        <Route path="/special-requests" element={<PlaceholderPage title="Special Requests" />} />
-        <Route path="/send-page" element={<PlaceholderPage title="Send a Page" />} />
+        <Route path="/admin/residents" element={<AdminResidents />} />
+        <Route path="/login" element={<Login />} />
       </Routes>
     </BrowserRouter>
   );
 }
-
-function PlaceholderPage({ title }: { title: string }) {
-  return (
-    <div style={{ padding: 32 }}>
-      <h1>{title}</h1>
-      <p>This page will be built next.</p>
-    </div>
-  );
-}
-
-export default App;
