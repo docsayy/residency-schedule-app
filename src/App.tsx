@@ -1,55 +1,44 @@
-import { BrowserRouter, Link, Route, Routes } from "react-router-dom";
-import {
-  AppBar,
-  Button,
-  CssBaseline,
-  Toolbar,
-  Typography,
-} from "@mui/material";
-import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
+import { Box, CircularProgress } from "@mui/material";
+import { AuthProvider, useAuth } from "./context/AuthContext";
+import DashboardLayout from "./layouts/DashboardLayout";
+import LoginPage from "./pages/LoginPage";
+import ResidentsPage from "./pages/ResidentsPage";
 
-import Dashboard from "./pages/Dashboard";
-import BlockSchedule from "./pages/BlockSchedule";
-import Login from "./pages/Login";
-import AdminResidents from "./pages/AdminResidents";
+function AppContent() {
+  const { user, loading } = useAuth();
 
-export default function App() {
+  if (loading) {
+    return (
+      <Box
+        sx={{
+          minHeight: "100vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (!user) {
+    return <LoginPage />;
+  }
+
   return (
-    <BrowserRouter>
-      <CssBaseline />
-
-      <AppBar position="static" elevation={0}>
-        <Toolbar>
-          <CalendarTodayIcon sx={{ mr: 2 }} />
-
-          <Typography variant="h6" sx={{ flexGrow: 1, fontWeight: 700 }}>
-            Residency Scheduler
-          </Typography>
-
-          <Button color="inherit" component={Link} to="/">
-            Who&apos;s On
-          </Button>
-
-          <Button color="inherit" component={Link} to="/block-schedule">
-            Block Schedule
-          </Button>
-
-          <Button color="inherit" component={Link} to="/admin/residents">
-            Residents
-          </Button>
-
-          <Button color="inherit" component={Link} to="/login">
-            Login
-          </Button>
-        </Toolbar>
-      </AppBar>
-
-      <Routes>
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/block-schedule" element={<BlockSchedule />} />
-        <Route path="/admin/residents" element={<AdminResidents />} />
-        <Route path="/login" element={<Login />} />
-      </Routes>
-    </BrowserRouter>
+    <DashboardLayout>
+      <ResidentsPage />
+    </DashboardLayout>
   );
 }
+
+function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
+  );
+}
+
+export default App;
