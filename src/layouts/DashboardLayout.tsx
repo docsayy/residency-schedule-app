@@ -23,22 +23,27 @@ import SettingsIcon from "@mui/icons-material/Settings";
 import LogoutIcon from "@mui/icons-material/Logout";
 
 import { useAuth } from "../context/AuthContext";
+import type { AppPage } from "../types/page";
 
 const drawerWidth = 260;
 
-const navItems = [
-  { label: "Dashboard", icon: <DashboardIcon /> },
-  { label: "Residents", icon: <PeopleIcon /> },
-  { label: "Schedule", icon: <CalendarMonthIcon /> },
-  { label: "Call Swaps", icon: <SwapHorizIcon /> },
-  { label: "Vacation", icon: <BeachAccessIcon /> },
-  { label: "Settings", icon: <SettingsIcon /> },
+const navItems: { label: string; page: AppPage; icon: React.ReactNode }[] = [
+  { label: "Dashboard", page: "dashboard", icon: <DashboardIcon /> },
+  { label: "Residents", page: "residents", icon: <PeopleIcon /> },
+  { label: "Schedule", page: "schedule", icon: <CalendarMonthIcon /> },
+  { label: "Call Swaps", page: "call-swaps", icon: <SwapHorizIcon /> },
+  { label: "Vacation", page: "vacation", icon: <BeachAccessIcon /> },
+  { label: "Settings", page: "settings", icon: <SettingsIcon /> },
 ];
 
 export default function DashboardLayout({
   children,
+  currentPage,
+  onPageChange,
 }: {
   children: React.ReactNode;
+  currentPage: AppPage;
+  onPageChange: (page: AppPage) => void;
 }) {
   const { user, profile, logout } = useAuth();
 
@@ -108,8 +113,9 @@ export default function DashboardLayout({
         <List>
           {navItems.map((item) => (
             <ListItemButton
-              key={item.label}
-              selected={item.label === "Residents"}
+              key={item.page}
+              selected={item.page === currentPage}
+              onClick={() => onPageChange(item.page)}
               sx={{
                 mx: 1,
                 my: 0.5,
