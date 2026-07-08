@@ -12,7 +12,6 @@ import {
   DialogContent,
   DialogTitle,
   IconButton,
-  MenuItem,
   Stack,
   Tab,
   Tabs,
@@ -28,103 +27,113 @@ import ToggleOffIcon from "@mui/icons-material/ToggleOff";
 import ToggleOnIcon from "@mui/icons-material/ToggleOn";
 
 import { useAuth } from "../context/AuthContext";
-import { useResidents } from "../hooks/useResidents";
-import type { PGY, Resident, ResidentRole } from "../types/resident";
+import { useAttendings } from "../hooks/useAttendings";
+import type { Attending } from "../types/attending";
 import { canManageResidents } from "../utils/permissions";
 
-type ResidentTab = "Everyone" | "PGY-1" | "PGY-2" | "PGY-3";
+type AttendingTab = "All" | "Admitting" | "Specialty" | "Inactive";
 
-const emptyResident: Resident = {
+const emptyAttending: Attending = {
   id: "",
   firstName: "",
   lastName: "",
   displayName: "",
+  specialty: "",
   email: "",
   pager: "",
   phone: "",
-  pgy: "PGY-1",
-  role: "Resident",
   active: true,
+  availableForScheduling: true,
+  notes: "",
 };
 
-export default function ResidentsPage() {
+function isAdmittingAttending(attending: Attending) {
+  const text = `${attending.specialty} ${attending.notes}`.toLowerCase();
+
+  if (!attending.specialty?.trim()) return true;
+
+  return (
+    text.includes("admitting") ||
+    text.includes("observation") ||
+    text.includes("faculty") ||
+    text.includes("medicine") ||
+    text.includes("general")
+  );
+}
+
+export default function AttendingsPage() {
   const { profile } = useAuth();
   const allowManage = canManageResidents(profile?.role);
 
   const {
-    residents,
+    attendings,
     loading,
     error,
-    addResident,
-    saveResident,
-    removeResident,
-  } = useResidents();
+    addAttending,
+    saveAttending,
+    removeAttending,
+  } = useAttendings();
 
-  const [tab, setTab] = useState<ResidentTab>("Everyone");
+  const [tab, setTab] = useState<AttendingTab>("All");
   const [search, setSearch] = useState("");
-  const [editingResident, setEditingResident] = useState<Resident | null>(null);
-  const [addingResident, setAddingResident] = useState(false);
+  const [editingAttending, setEditingAttending] = useState<Attending | null>(null);
+  const [addingAttending, setAddingAttending] = useState(false);
 
-  const filteredResidents = useMemo(() => {
-    return residents
-      .filter((resident) => {
-        if (tab === "Everyone") return true;
-        return resident.pgy === tab;
+  const filteredAttendings = useMemo(() => {
+    return attendings
+      .filter((attending) => {
+        if (tab === "All") return true;
+        if (tab === "Admitting") return attending.active && isAdmittingAttending(attending);
+        if (tab === "Specialty") return attending.active && !isAdmittingAttending(attending);
+        if (tab === "Inactive") return !attending.active;
+        return true;
       })
-      .filter((resident) => {
+      .filter((attending) => {
         const text =
-          `${resident.displayName} ${resident.firstName} ${resident.lastName} ${resident.email} ${resident.pgy} ${resident.role} ${resident.pager}`.toLowerCase();
+          `${attending.displayName} ${attending.firstName} ${attending.lastName} ${attending.specialty} ${attending.email} ${attending.pager} ${attending.phone}`.toLowerCase();
 
         return text.includes(search.toLowerCase());
       })
       .sort((a, b) => {
-        const pgySort = a.pgy.localeCompare(b.pgy);
-        if (pgySort !== 0) return pgySort;
+        const specialtySort = (a.specialty || "").localeCompare(b.specialty || "");
+        if (specialtySort !== 0) return specialtySort;
         return a.displayName.localeCompare(b.displayName);
       });
-  }, [residents, search, tab]);
+  }, [attendings, search, tab]);
 
-  async function deactivateResident(id: string) {
-    if (!allowManage) return;
-    const resident = residents.find((item) => item.id === id);
-    if (!resident) return;
-    await saveResident({ ...resident, active: false });
-  }
-
-  async function activateResident(id: string) {
-    if (!allowManage) return;
-    const resident = residents.find((item) => item.id === id);
-    if (!resident) return;
-    await saveResident({ ...resident, active: true });
-  }
-
-  async function saveEditedResident(updated: Resident) {
-    if (!allowManage) return;
-    await saveResident(updated);
-    setEditingResident(null);
-  }
-
-  async function handleAddResident(newResident: Resident) {
+  async function handleAddAttending(attending: Attending) {
     if (!allowManage) return;
 
-    const { id, ...residentWithoutId } = newResident;
+    const { id, ...attendingWithoutId } = attending;
     void id;
 
-    await addResident({
-      ...residentWithoutId,
+    await addAttending({
+      ...attendingWithoutId,
       active: true,
+      availableForScheduling: true,
     });
 
-    setAddingResident(false);
+    setAddingAttending(false);
   }
 
-  async function handleDeleteResident(id: string) {
+  async function handleSaveAttending(attending: Attending) {
+    if (!allowManage) return;
+    await saveAttending(attending);
+    setEditingAttending(null);
+  }
+
+  async function toggleActive(attending: Attending) {
+    if (!allowManage) return;
+    await saveAttending({ ...attending, active: !attending.active });
+  }
+
+  async function handleDeleteAttending(id: string) {
     if (!allowManage) return;
 
-    const confirmed = window.confirm("Delete this resident?");
+    const confirmed = window.confirm("Delete this attending?");
     if (!confirmed) return;
 
-    await removeResident(id);
+    await removeAttending(id);
   }
 
   return (
@@ -138,10 +147,10 @@ export default function ResidentsPage() {
       >
         <Box>
           <Typography variant="h4" fontWeight={800}>
-            Residents
+            Attendings
           </Typography>
           <Typography color="text.secondary">
-            Compact resident roster and profile controls.
+            Manage admitting attendings and specialty/consulting attendings.
           </Typography>
         </Box>
 
@@ -149,17 +158,16 @@ export default function ResidentsPage() {
           <Button
             variant="contained"
             startIcon={<AddIcon />}
-            onClick={() => setAddingResident(true)}
+            onClick={() => setAddingAttending(true)}
           >
-            Add Resident
+            Add Attending
           </Button>
         )}
       </Stack>
 
       {!allowManage && (
         <Alert severity="info" sx={{ mb: 2 }}>
-          You have view-only access. Chiefs, program coordinators, and admins can
-          edit resident profiles.
+          You have view-only access. Chiefs, coordinators, and admins can manage attendings.
         </Alert>
       )}
 
@@ -174,21 +182,21 @@ export default function ResidentsPage() {
           <Stack spacing={1.5}>
             <Tabs
               value={tab}
-              onChange={(_, value: ResidentTab) => setTab(value)}
+              onChange={(_, value: AttendingTab) => setTab(value)}
               variant="scrollable"
               scrollButtons="auto"
             >
-              <Tab label="Everyone" value="Everyone" />
-              <Tab label="PGY1" value="PGY-1" />
-              <Tab label="PGY2" value="PGY-2" />
-              <Tab label="PGY3" value="PGY-3" />
+              <Tab label="All" value="All" />
+              <Tab label="Admitting Attendings" value="Admitting" />
+              <Tab label="Specialty / Consulting" value="Specialty" />
+              <Tab label="Inactive" value="Inactive" />
             </Tabs>
 
             <TextField
               size="small"
               fullWidth
-              label="Search residents"
-              placeholder="Search by name, pager, PGY, role, or email"
+              label="Search attendings"
+              placeholder="Search by name, specialty, pager, phone, or email"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -202,18 +210,18 @@ export default function ResidentsPage() {
             <Stack alignItems="center" sx={{ py: 5 }}>
               <CircularProgress />
               <Typography color="text.secondary" sx={{ mt: 2 }}>
-                Loading residents...
+                Loading attendings...
               </Typography>
             </Stack>
           ) : (
             <Box sx={{ overflowX: "auto" }}>
-              <Box sx={{ minWidth: allowManage ? 780 : 620 }}>
+              <Box sx={{ minWidth: allowManage ? 880 : 720 }}>
                 <Box
                   sx={{
                     display: "grid",
                     gridTemplateColumns: allowManage
-                      ? "minmax(190px,1.5fr) 100px 150px 100px 150px"
-                      : "minmax(190px,1.5fr) 100px 150px 100px",
+                      ? "minmax(190px,1.4fr) 170px 110px 130px 130px 120px"
+                      : "minmax(190px,1.4fr) 170px 110px 130px 130px",
                     gap: 1,
                     px: 1,
                     py: 0.75,
@@ -222,20 +230,21 @@ export default function ResidentsPage() {
                   }}
                 >
                   <HeaderText>Name</HeaderText>
+                  <HeaderText>Group / Specialty</HeaderText>
                   <HeaderText>Pager</HeaderText>
-                  <HeaderText>PGY / Role</HeaderText>
+                  <HeaderText>Phone</HeaderText>
                   <HeaderText>Status</HeaderText>
                   {allowManage && <HeaderText>Controls</HeaderText>}
                 </Box>
 
-                {filteredResidents.map((resident, index) => (
+                {filteredAttendings.map((attending, index) => (
                   <Box
-                    key={resident.id}
+                    key={attending.id}
                     sx={{
                       display: "grid",
                       gridTemplateColumns: allowManage
-                        ? "minmax(190px,1.5fr) 100px 150px 100px 150px"
-                        : "minmax(190px,1.5fr) 100px 150px 100px",
+                        ? "minmax(190px,1.4fr) 170px 110px 130px 130px 120px"
+                        : "minmax(190px,1.4fr) 170px 110px 130px 130px",
                       gap: 1,
                       alignItems: "center",
                       px: 1,
@@ -248,40 +257,56 @@ export default function ResidentsPage() {
                   >
                     <Box>
                       <Typography fontSize={13.5} fontWeight={750}>
-                        {resident.displayName}
+                        {attending.displayName}
                       </Typography>
                       <Typography variant="caption" color="text.secondary">
-                        {resident.email || `${resident.firstName} ${resident.lastName}`}
+                        {attending.email || `${attending.firstName} ${attending.lastName}`}
                       </Typography>
                     </Box>
 
-                    <Typography fontSize={13} fontWeight={700}>
-                      {resident.pager ? `📟 ${resident.pager}` : "—"}
-                    </Typography>
-
                     <Stack direction="row" spacing={0.5} alignItems="center">
-                      <LevelChip level={resident.pgy} />
-                      {resident.role !== "Resident" && (
-                        <Chip
-                          label={resident.role}
-                          size="small"
-                          sx={{ height: 20, fontSize: 11, fontWeight: 700 }}
-                        />
-                      )}
+                      <Chip
+                        label={isAdmittingAttending(attending) ? "Admitting" : "Specialty"}
+                        size="small"
+                        sx={{
+                          height: 21,
+                          fontSize: 11,
+                          fontWeight: 800,
+                          color: isAdmittingAttending(attending) ? "#2563eb" : "#7c3aed",
+                          backgroundColor: isAdmittingAttending(attending)
+                            ? "#eff6ff"
+                            : "#f5f3ff",
+                          border: "1px solid",
+                          borderColor: isAdmittingAttending(attending)
+                            ? "#bfdbfe"
+                            : "#ddd6fe",
+                        }}
+                      />
+                      <Typography fontSize={12.5} fontWeight={650}>
+                        {attending.specialty || "Medicine"}
+                      </Typography>
                     </Stack>
 
+                    <Typography fontSize={13} fontWeight={700}>
+                      {attending.pager ? `📟 ${attending.pager}` : "—"}
+                    </Typography>
+
+                    <Typography fontSize={13} fontWeight={700}>
+                      {attending.phone ? `☎ ${attending.phone}` : "—"}
+                    </Typography>
+
                     <Chip
-                      label={resident.active ? "Active" : "Inactive"}
+                      label={attending.active ? "Active" : "Inactive"}
                       size="small"
                       sx={{
                         width: "fit-content",
-                        height: 22,
+                        height: 21,
                         fontSize: 11,
                         fontWeight: 800,
-                        color: resident.active ? "#15803d" : "#64748b",
-                        backgroundColor: resident.active ? "#ecfdf5" : "#f1f5f9",
+                        color: attending.active ? "#15803d" : "#64748b",
+                        backgroundColor: attending.active ? "#ecfdf5" : "#f1f5f9",
                         border: "1px solid",
-                        borderColor: resident.active ? "#bbf7d0" : "#e2e8f0",
+                        borderColor: attending.active ? "#bbf7d0" : "#e2e8f0",
                       }}
                     />
 
@@ -290,23 +315,19 @@ export default function ResidentsPage() {
                         <Tooltip title="Edit">
                           <IconButton
                             size="small"
-                            onClick={() => setEditingResident(resident)}
+                            onClick={() => setEditingAttending(attending)}
                           >
                             <EditIcon fontSize="small" />
                           </IconButton>
                         </Tooltip>
 
-                        <Tooltip title={resident.active ? "Deactivate" : "Activate"}>
+                        <Tooltip title={attending.active ? "Deactivate" : "Activate"}>
                           <IconButton
                             size="small"
-                            color={resident.active ? "warning" : "success"}
-                            onClick={() =>
-                              resident.active
-                                ? deactivateResident(resident.id)
-                                : activateResident(resident.id)
-                            }
+                            color={attending.active ? "warning" : "success"}
+                            onClick={() => toggleActive(attending)}
                           >
-                            {resident.active ? (
+                            {attending.active ? (
                               <ToggleOffIcon fontSize="small" />
                             ) : (
                               <ToggleOnIcon fontSize="small" />
@@ -318,7 +339,7 @@ export default function ResidentsPage() {
                           <IconButton
                             size="small"
                             color="error"
-                            onClick={() => handleDeleteResident(resident.id)}
+                            onClick={() => handleDeleteAttending(attending.id)}
                           >
                             <DeleteIcon fontSize="small" />
                           </IconButton>
@@ -328,9 +349,9 @@ export default function ResidentsPage() {
                   </Box>
                 ))}
 
-                {filteredResidents.length === 0 && (
+                {filteredAttendings.length === 0 && (
                   <Typography color="text.secondary" sx={{ p: 2 }}>
-                    No residents found.
+                    No attendings found.
                   </Typography>
                 )}
               </Box>
@@ -339,23 +360,23 @@ export default function ResidentsPage() {
         </CardContent>
       </Card>
 
-      {editingResident && allowManage && (
-        <ResidentFormDialog
-          title="Edit Resident"
-          resident={editingResident}
-          open={Boolean(editingResident)}
-          onCancel={() => setEditingResident(null)}
-          onSave={saveEditedResident}
+      {addingAttending && allowManage && (
+        <AttendingFormDialog
+          title="Add Attending"
+          attending={emptyAttending}
+          open={addingAttending}
+          onCancel={() => setAddingAttending(false)}
+          onSave={handleAddAttending}
         />
       )}
 
-      {addingResident && allowManage && (
-        <ResidentFormDialog
-          title="Add Resident"
-          resident={emptyResident}
-          open={addingResident}
-          onCancel={() => setAddingResident(false)}
-          onSave={handleAddResident}
+      {editingAttending && allowManage && (
+        <AttendingFormDialog
+          title="Edit Attending"
+          attending={editingAttending}
+          open={Boolean(editingAttending)}
+          onCancel={() => setEditingAttending(null)}
+          onSave={handleSaveAttending}
         />
       )}
     </Box>
@@ -370,45 +391,20 @@ function HeaderText({ children }: { children: React.ReactNode }) {
   );
 }
 
-function LevelChip({ level }: { level: string }) {
-  const style =
-    level === "PGY-1"
-      ? { color: "#dc2626", bg: "#fff1f2", border: "#fecdd3" }
-      : level === "PGY-2"
-        ? { color: "#2563eb", bg: "#eff6ff", border: "#bfdbfe" }
-        : { color: "#15803d", bg: "#ecfdf5", border: "#bbf7d0" };
-
-  return (
-    <Chip
-      label={level}
-      size="small"
-      sx={{
-        height: 20,
-        fontSize: 11,
-        fontWeight: 900,
-        color: style.color,
-        backgroundColor: style.bg,
-        border: "1px solid",
-        borderColor: style.border,
-      }}
-    />
-  );
-}
-
-function ResidentFormDialog({
+function AttendingFormDialog({
   title,
-  resident,
+  attending,
   open,
   onCancel,
   onSave,
 }: {
   title: string;
-  resident: Resident;
+  attending: Attending;
   open: boolean;
   onCancel: () => void;
-  onSave: (resident: Resident) => void;
+  onSave: (attending: Attending) => void;
 }) {
-  const [form, setForm] = useState<Resident>(resident);
+  const [form, setForm] = useState<Attending>(attending);
 
   function handleSave() {
     const displayName =
@@ -449,6 +445,14 @@ function ResidentFormDialog({
           />
 
           <TextField
+            label="Specialty / Group"
+            value={form.specialty}
+            onChange={(e) => setForm({ ...form, specialty: e.target.value })}
+            placeholder="Medicine, Observation, Cardiology, GI, Pulmonary..."
+            fullWidth
+          />
+
+          <TextField
             label="Email"
             value={form.email}
             onChange={(e) => setForm({ ...form, email: e.target.value })}
@@ -470,31 +474,14 @@ function ResidentFormDialog({
           />
 
           <TextField
-            select
-            label="PGY"
-            value={form.pgy}
-            onChange={(e) => setForm({ ...form, pgy: e.target.value as PGY })}
+            label="Notes"
+            value={form.notes}
+            onChange={(e) => setForm({ ...form, notes: e.target.value })}
+            multiline
+            minRows={3}
+            placeholder="Use notes for extra classification if needed."
             fullWidth
-          >
-            <MenuItem value="PGY-1">PGY-1</MenuItem>
-            <MenuItem value="PGY-2">PGY-2</MenuItem>
-            <MenuItem value="PGY-3">PGY-3</MenuItem>
-          </TextField>
-
-          <TextField
-            select
-            label="Role"
-            value={form.role}
-            onChange={(e) =>
-              setForm({ ...form, role: e.target.value as ResidentRole })
-            }
-            fullWidth
-          >
-            <MenuItem value="Resident">Resident</MenuItem>
-            <MenuItem value="Chief Resident">Chief Resident</MenuItem>
-            <MenuItem value="Attending">Attending</MenuItem>
-            <MenuItem value="Program Coordinator">Program Coordinator</MenuItem>
-          </TextField>
+          />
         </Stack>
       </DialogContent>
 

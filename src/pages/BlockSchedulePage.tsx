@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
 import {
   Alert,
-  Autocomplete,
   Box,
   Button,
   Card,
@@ -12,14 +11,11 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  MenuItem,
   Stack,
-  Tab,
-  Tabs,
   TextField,
   Typography,
 } from "@mui/material";
-
-import DeleteIcon from "@mui/icons-material/Delete";
 
 import { useAuth } from "../context/AuthContext";
 import { useAcademicBlocks } from "../hooks/useAcademicBlocks";
@@ -32,8 +28,6 @@ import type { Resident } from "../types/resident";
 import type { RotationRequirement } from "../types/rotation";
 import { generateAcademicBlocks } from "../utils/academicBlocks";
 import { canBuildSchedule } from "../utils/permissions";
-
-type BlockTab = "Everyone" | "PGY-1" | "PGY-2" | "PGY-3" | "Statistics";
 
 function getDefaultAcademicYear() {
   const now = new Date();
@@ -64,11 +58,8 @@ export default function BlockSchedulePage() {
     removeAssignment,
   } = useBlockAssignments();
 
-  const [tab, setTab] = useState<BlockTab>("Everyone");
   const [academicYear, setAcademicYear] = useState(getDefaultAcademicYear());
   const [firstBlockEndDate, setFirstBlockEndDate] = useState("");
-  const [saving, setSaving] = useState(false);
-
   const [editingCell, setEditingCell] = useState<{
     resident: Resident;
     block: AcademicBlock;
@@ -85,20 +76,17 @@ export default function BlockSchedulePage() {
     return source.filter((block) => block.academicYear === academicYear);
   }, [previewBlocks, blocks, academicYear]);
 
-  const activeResidents = useMemo(() => {
-    return residents
-      .filter((resident) => resident.active)
-      .filter((resident) => {
-        if (tab === "Everyone") return true;
-        if (tab === "Statistics") return true;
-        return resident.pgy === tab;
-      })
-      .sort((a, b) => {
-        const pgyOrder = a.pgy.localeCompare(b.pgy);
-        if (pgyOrder !== 0) return pgyOrder;
-        return a.displayName.localeCompare(b.displayName);
-      });
-  }, [residents, tab]);
+  const activeResidents = useMemo(
+    () =>
+      residents
+        .filter((resident) => resident.active)
+        .sort((a, b) => {
+          const pgyOrder = a.pgy.localeCompare(b.pgy);
+          if (pgyOrder !== 0) return pgyOrder;
+          return a.displayName.localeCompare(b.displayName);
+        }),
+    [residents]
+  );
 
   const activeRotations = useMemo(
     () =>
@@ -110,70 +98,20 @@ export default function BlockSchedulePage() {
 
   const assignmentsByResidentBlock = useMemo(() => {
     const grouped: Record<string, BlockAssignment> = {};
-
     for (const assignment of assignments) {
       grouped[`${assignment.residentId}_${assignment.blockId}`] = assignment;
     }
-
     return grouped;
   }, [assignments]);
 
-  const rotationStats = useMemo(() => {
-    const stats: Record<
-      string,
-      {
-        residentName: string;
-        pgy: string;
-        totalBlocks: number;
-        rotations: Record<string, number>;
-      }
-    > = {};
-
-    for (const resident of residents.filter((item) => item.active)) {
-      stats[resident.id] = {
-        residentName: resident.displayName,
-        pgy: resident.pgy,
-        totalBlocks: 0,
-        rotations: {},
-      };
-    }
-
-    for (const assignment of assignments) {
-      if (!stats[assignment.residentId]) continue;
-
-      stats[assignment.residentId].totalBlocks += 1;
-      stats[assignment.residentId].rotations[assignment.rotationName] =
-        (stats[assignment.residentId].rotations[assignment.rotationName] || 0) +
-        1;
-    }
-
-    return Object.values(stats).sort((a, b) => {
-      const pgyOrder = a.pgy.localeCompare(b.pgy);
-      if (pgyOrder !== 0) return pgyOrder;
-      return a.residentName.localeCompare(b.residentName);
-    });
-  }, [assignments, residents]);
-
   async function handleSaveBlocks() {
     if (!allowBuild || previewBlocks.length === 0) return;
-
-    setSaving(true);
-    try {
-      await saveBlocks(previewBlocks);
-    } finally {
-      setSaving(false);
-    }
+    await saveBlocks(previewBlocks);
   }
 
   async function handleSeedRotations() {
     if (!allowBuild) return;
-
-    setSaving(true);
-    try {
-      await seedRotations();
-    } finally {
-      setSaving(false);
-    }
+    await seedRotations();
   }
 
   async function handleSaveAssignment(data: {
@@ -190,47 +128,35 @@ export default function BlockSchedulePage() {
 
     const now = new Date().toISOString();
 
-    setSaving(true);
-    try {
-      if (data.existingAssignment) {
-        await saveAssignment({
-          ...data.existingAssignment,
-          rotationId: rotation.id,
-          rotationName: rotation.name,
-          notes: data.notes,
-          updatedAt: now,
-        });
-      } else {
-        await addAssignment({
-          academicYear: data.block.academicYear,
-          blockId: data.block.id,
-          blockNumber: data.block.blockNumber,
-          residentId: data.resident.id,
-          residentName: data.resident.displayName,
-          rotationId: rotation.id,
-          rotationName: rotation.name,
-          notes: data.notes,
-          createdAt: now,
-          updatedAt: now,
-        });
-      }
-
-      setEditingCell(null);
-    } finally {
-      setSaving(false);
+    if (data.existingAssignment) {
+      await saveAssignment({
+        ...data.existingAssignment,
+        rotationId: rotation.id,
+        rotationName: rotation.name,
+        notes: data.notes,
+        updatedAt: now,
+      });
+    } else {
+      await addAssignment({
+        academicYear: data.block.academicYear,
+        blockId: data.block.id,
+        blockNumber: data.block.blockNumber,
+        residentId: data.resident.id,
+        residentName: data.resident.displayName,
+        rotationId: rotation.id,
+        rotationName: rotation.name,
+        notes: data.notes,
+        createdAt: now,
+        updatedAt: now,
+      });
     }
+
+    setEditingCell(null);
   }
 
   async function handleRemoveAssignment(id: string) {
     if (!allowBuild) return;
-
-    setSaving(true);
-    try {
-      await removeAssignment(id);
-      setEditingCell(null);
-    } finally {
-      setSaving(false);
-    }
+    await removeAssignment(id);
   }
 
   const pageError = error || rotationsError || assignmentsError;
@@ -240,7 +166,7 @@ export default function BlockSchedulePage() {
     <Box>
       <Stack sx={{ mb: 2 }}>
         <Typography variant="h4" fontWeight={800}>
-          Resident Block Schedule
+          Block Schedule
         </Typography>
         <Typography color="text.secondary">
           Assign residents to rotations across academic blocks.
@@ -292,17 +218,13 @@ export default function BlockSchedulePage() {
                 <Button
                   variant="contained"
                   onClick={handleSaveBlocks}
-                  disabled={previewBlocks.length === 0 || saving}
+                  disabled={previewBlocks.length === 0}
                 >
                   Save Academic Blocks
                 </Button>
 
                 {activeRotations.length === 0 && (
-                  <Button
-                    variant="outlined"
-                    onClick={handleSeedRotations}
-                    disabled={saving}
-                  >
+                  <Button variant="outlined" onClick={handleSeedRotations}>
                     Seed Rotations
                   </Button>
                 )}
@@ -318,20 +240,6 @@ export default function BlockSchedulePage() {
             Block Assignment Matrix
           </Typography>
 
-          <Tabs
-            value={tab}
-            onChange={(_, value: BlockTab) => setTab(value)}
-            sx={{ mb: 2 }}
-            variant="scrollable"
-            scrollButtons="auto"
-          >
-            <Tab label="Everyone" value="Everyone" />
-            <Tab label="PGY1" value="PGY-1" />
-            <Tab label="PGY2" value="PGY-2" />
-            <Tab label="PGY3" value="PGY-3" />
-            <Tab label="Statistics" value="Statistics" />
-          </Tabs>
-
           {pageLoading ? (
             <Stack alignItems="center" sx={{ py: 5 }}>
               <CircularProgress />
@@ -339,8 +247,6 @@ export default function BlockSchedulePage() {
                 Loading block schedule...
               </Typography>
             </Stack>
-          ) : tab === "Statistics" ? (
-            <BlockStatistics stats={rotationStats} />
           ) : displayedBlocks.length === 0 ? (
             <Typography color="text.secondary">
               No blocks found for this academic year.
@@ -417,6 +323,20 @@ export default function BlockSchedulePage() {
                                   {assignment.notes}
                                 </Typography>
                               )}
+
+                              {allowBuild && (
+                                <Button
+                                  size="small"
+                                  color="error"
+                                  sx={{ minWidth: 0, p: 0.25 }}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleRemoveAssignment(assignment.id);
+                                  }}
+                                >
+                                  Clear
+                                </Button>
+                              )}
                             </Stack>
                           ) : (
                             <Typography variant="caption" color="text.secondary">
@@ -430,12 +350,6 @@ export default function BlockSchedulePage() {
                 ))}
               </Box>
             </Box>
-          )}
-
-          {saving && allowBuild && (
-            <Typography color="text.secondary" sx={{ mt: 1 }}>
-              Saving...
-            </Typography>
           )}
         </CardContent>
       </Card>
@@ -471,73 +385,11 @@ export default function BlockSchedulePage() {
           block={editingCell.block}
           rotations={activeRotations}
           existingAssignment={editingCell.assignment}
-          saving={saving}
           onCancel={() => setEditingCell(null)}
           onSave={handleSaveAssignment}
-          onRemove={handleRemoveAssignment}
         />
       )}
     </Box>
-  );
-}
-
-function BlockStatistics({
-  stats,
-}: {
-  stats: {
-    residentName: string;
-    pgy: string;
-    totalBlocks: number;
-    rotations: Record<string, number>;
-  }[];
-}) {
-  return (
-    <Stack spacing={1}>
-      <Alert severity="info">
-        Basic rotation statistics are shown here. Later this will include
-        weekend calls, holiday calls, night float, jeopardy, vacation, and
-        average spacing.
-      </Alert>
-
-      {stats.map((item) => (
-        <Box
-          key={`${item.residentName}-${item.pgy}`}
-          sx={{
-            p: 1,
-            border: "1px solid",
-            borderColor: "divider",
-            borderRadius: 1,
-          }}
-        >
-          <Stack
-            direction={{ xs: "column", md: "row" }}
-            spacing={1}
-            justifyContent="space-between"
-          >
-            <Box>
-              <Typography fontWeight={900}>{item.residentName}</Typography>
-              <Typography variant="caption" color="text.secondary">
-                {item.pgy} • {item.totalBlocks} assigned block(s)
-              </Typography>
-            </Box>
-
-            <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
-              {Object.entries(item.rotations).map(([rotation, count]) => (
-                <Chip
-                  key={rotation}
-                  label={`${rotation}: ${count}`}
-                  size="small"
-                />
-              ))}
-
-              {Object.keys(item.rotations).length === 0 && (
-                <Chip label="No assignments" size="small" />
-              )}
-            </Stack>
-          </Stack>
-        </Box>
-      ))}
-    </Stack>
   );
 }
 
@@ -547,17 +399,14 @@ function BlockAssignmentDialog({
   block,
   rotations,
   existingAssignment,
-  saving,
   onCancel,
   onSave,
-  onRemove,
 }: {
   open: boolean;
   resident: Resident;
   block: AcademicBlock;
   rotations: RotationRequirement[];
   existingAssignment?: BlockAssignment;
-  saving: boolean;
   onCancel: () => void;
   onSave: (data: {
     resident: Resident;
@@ -566,85 +415,46 @@ function BlockAssignmentDialog({
     notes: string;
     existingAssignment?: BlockAssignment;
   }) => Promise<void>;
-  onRemove: (id: string) => Promise<void>;
 }) {
-  const [selectedRotation, setSelectedRotation] =
-    useState<RotationRequirement | null>(
-      rotations.find((item) => item.id === existingAssignment?.rotationId) ||
-        null
-    );
-
+  const [rotationId, setRotationId] = useState(
+    existingAssignment?.rotationId || ""
+  );
   const [notes, setNotes] = useState(existingAssignment?.notes || "");
 
   async function handleSave() {
-    if (!selectedRotation) return;
-
-    await onSave({
-      resident,
-      block,
-      rotationId: selectedRotation.id,
-      notes,
-      existingAssignment,
-    });
-  }
-
-  async function handleRemove() {
-    if (!existingAssignment) return;
-
-    const confirmed = window.confirm(
-      `Clear ${resident.displayName}'s assignment for ${block.name}?`
-    );
-
-    if (!confirmed) return;
-
-    await onRemove(existingAssignment.id);
+    if (!rotationId) return;
+    await onSave({ resident, block, rotationId, notes, existingAssignment });
   }
 
   return (
     <Dialog open={open} onClose={onCancel} fullWidth maxWidth="sm">
       <DialogTitle>
-        {existingAssignment ? "Edit Assignment" : "Add Assignment"}
+        {resident.displayName} — {block.name}
       </DialogTitle>
 
       <DialogContent>
         <Stack spacing={2} sx={{ mt: 1 }}>
-          <Box
-            sx={{
-              p: 1.25,
-              borderRadius: 2,
-              backgroundColor: "#f8fafc",
-              border: "1px solid",
-              borderColor: "divider",
-            }}
-          >
-            <Typography fontWeight={900}>{resident.displayName}</Typography>
-            <Typography variant="body2" color="text.secondary">
-              {resident.pgy} • {block.name}: {block.startDate} →{" "}
-              {block.endDate}
-            </Typography>
+          <TextField label="Resident" value={resident.displayName} disabled />
 
-            {existingAssignment && (
-              <Typography variant="body2" sx={{ mt: 0.75 }}>
-                Current: <b>{existingAssignment.rotationName}</b>
-              </Typography>
-            )}
-          </Box>
-
-          <Autocomplete
-            options={rotations}
-            value={selectedRotation}
-            onChange={(_, value) => setSelectedRotation(value)}
-            getOptionLabel={(option) => option.name}
-            isOptionEqualToValue={(option, value) => option.id === value.id}
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                label="Search and select rotation"
-                placeholder="Start typing rotation name..."
-                fullWidth
-              />
-            )}
+          <TextField
+            label="Block"
+            value={`${block.name}: ${block.startDate} → ${block.endDate}`}
+            disabled
           />
+
+          <TextField
+            select
+            label="Rotation"
+            value={rotationId}
+            onChange={(e) => setRotationId(e.target.value)}
+            fullWidth
+          >
+            {rotations.map((rotation) => (
+              <MenuItem key={rotation.id} value={rotation.id}>
+                {rotation.name}
+              </MenuItem>
+            ))}
+          </TextField>
 
           <TextField
             label="Notes"
@@ -657,32 +467,11 @@ function BlockAssignmentDialog({
         </Stack>
       </DialogContent>
 
-      <DialogActions sx={{ justifyContent: "space-between" }}>
-        <Box>
-          {existingAssignment && (
-            <Button
-              color="error"
-              startIcon={<DeleteIcon />}
-              onClick={handleRemove}
-              disabled={saving}
-            >
-              Clear
-            </Button>
-          )}
-        </Box>
-
-        <Stack direction="row" spacing={1}>
-          <Button onClick={onCancel} disabled={saving}>
-            Cancel
-          </Button>
-          <Button
-            variant="contained"
-            onClick={handleSave}
-            disabled={!selectedRotation || saving}
-          >
-            Save
-          </Button>
-        </Stack>
+      <DialogActions>
+        <Button onClick={onCancel}>Cancel</Button>
+        <Button variant="contained" onClick={handleSave}>
+          Save
+        </Button>
       </DialogActions>
     </Dialog>
   );

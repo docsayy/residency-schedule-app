@@ -21,7 +21,9 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  async function handleSubmit() {
+  async function handleSubmit(event?: React.FormEvent<HTMLFormElement>) {
+    event?.preventDefault();
+
     try {
       setSubmitting(true);
       setError("");
@@ -50,62 +52,69 @@ export default function LoginPage() {
         p: 2,
       }}
     >
-      <Card sx={{ width: "100%", maxWidth: 440 }}>
+      <Card sx={{ width: "100%", maxWidth: 420 }}>
         <CardContent>
-          <Stack spacing={2}>
-            <Box>
-              <Typography variant="h4" fontWeight={800}>
-                Residency Scheduler
-              </Typography>
-              <Typography color="text.secondary">
-                Sign in with your JHMC hospital email.
-              </Typography>
-            </Box>
+          <Box component="form" onSubmit={handleSubmit}>
+            <Stack spacing={2}>
+              <Box>
+                <Typography variant="h4" fontWeight={800}>
+                  Residency Scheduler
+                </Typography>
+                <Typography color="text.secondary">
+                  Sign in with your JHMC hospital email.
+                </Typography>
+              </Box>
 
-            {error && <Alert severity="error">{error}</Alert>}
+              {error && <Alert severity="error">{error}</Alert>}
 
-            <TextField
-              label="Hospital Email"
-              placeholder="name@jhmc.org"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              fullWidth
-            />
+              <TextField
+                label="Hospital Email"
+                placeholder="name@jhmc.org"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                autoComplete="email"
+                fullWidth
+              />
 
-            <TextField
-              label="Password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              fullWidth
-            />
+              <TextField
+                label="Password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete={
+                  mode === "login" ? "current-password" : "new-password"
+                }
+                fullWidth
+              />
 
-            <Button
-              variant="contained"
-              onClick={handleSubmit}
-              disabled={submitting}
-              fullWidth
-            >
-              {submitting
-                ? "Please wait..."
-                : mode === "login"
-                  ? "Sign In"
-                  : "Create Account"}
-            </Button>
+              <Button
+                type="submit"
+                variant="contained"
+                disabled={submitting}
+                fullWidth
+              >
+                {submitting
+                  ? "Please wait..."
+                  : mode === "login"
+                    ? "Sign In"
+                    : "Create Account"}
+              </Button>
 
-            <Button
-              variant="text"
-              onClick={() =>
-                setMode((current) =>
-                  current === "login" ? "signup" : "login"
-                )
-              }
-            >
-              {mode === "login"
-                ? "Need an account? Sign up"
-                : "Already have an account? Sign in"}
-            </Button>
-          </Stack>
+              <Button
+                type="button"
+                variant="text"
+                onClick={() =>
+                  setMode((current) =>
+                    current === "login" ? "signup" : "login"
+                  )
+                }
+              >
+                {mode === "login"
+                  ? "Need an account? Sign up"
+                  : "Already have an account? Sign in"}
+              </Button>
+            </Stack>
+          </Box>
         </CardContent>
       </Card>
     </Box>

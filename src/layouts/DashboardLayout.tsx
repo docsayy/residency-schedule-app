@@ -11,8 +11,6 @@ import {
   ListItemButton,
   ListItemIcon,
   ListItemText,
-  Menu,
-  MenuItem,
   Stack,
   Toolbar,
   Typography,
@@ -21,22 +19,32 @@ import {
 import MenuIcon from "@mui/icons-material/Menu";
 import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
 import PeopleIcon from "@mui/icons-material/People";
+import BadgeIcon from "@mui/icons-material/Badge";
+import MedicalServicesIcon from "@mui/icons-material/MedicalServices";
 import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
 import ViewWeekIcon from "@mui/icons-material/ViewWeek";
 import SwapHorizIcon from "@mui/icons-material/SwapHoriz";
 import BeachAccessIcon from "@mui/icons-material/BeachAccess";
 import SettingsIcon from "@mui/icons-material/Settings";
 import LogoutIcon from "@mui/icons-material/Logout";
+import LocalHospitalIcon from "@mui/icons-material/LocalHospital";
 
 import { useAuth } from "../context/AuthContext";
 import type { AppPage } from "../types/page";
 
-const drawerWidth = 260;
+const drawerWidth = 250;
 
 const navItems: { label: string; page: AppPage; icon: React.ReactNode }[] = [
   { label: "Who's On", page: "whos-on", icon: <CalendarTodayIcon /> },
   { label: "Residents", page: "residents", icon: <PeopleIcon /> },
-  { label: "Schedule", page: "schedule", icon: <CalendarMonthIcon /> },
+  { label: "Attendings", page: "attendings", icon: <BadgeIcon /> },
+  {
+    label: "Attending Call Schedule",
+    page: "attending-call-schedule",
+    icon: <LocalHospitalIcon />,
+  },
+  { label: "Services", page: "services", icon: <MedicalServicesIcon /> },
+  { label: "Daily Call Schedule", page: "schedule", icon: <CalendarMonthIcon /> },
   { label: "Block Schedule", page: "block-schedule", icon: <ViewWeekIcon /> },
   { label: "Call Swaps", page: "call-swaps", icon: <SwapHorizIcon /> },
   { label: "Vacation", page: "vacation", icon: <BeachAccessIcon /> },
@@ -53,14 +61,60 @@ export default function DashboardLayout({
   onPageChange: (page: AppPage) => void;
 }) {
   const { user, profile, logout } = useAuth();
-  const [mobileMenuAnchor, setMobileMenuAnchor] = useState<null | HTMLElement>(
-    null
-  );
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
-  function handleMobileNavigate(page: AppPage) {
+  function handleNavigate(page: AppPage) {
     onPageChange(page);
-    setMobileMenuAnchor(null);
+    setDrawerOpen(false);
   }
+
+  const drawerContent = (
+    <>
+      <Toolbar />
+
+      <Box sx={{ p: 1.5 }}>
+        <Typography variant="overline" sx={{ color: "#94a3b8" }}>
+          Main Menu
+        </Typography>
+      </Box>
+
+      <Divider sx={{ borderColor: "rgba(255,255,255,0.12)" }} />
+
+      <List dense>
+        {navItems.map((item) => (
+          <ListItemButton
+            key={item.page}
+            selected={item.page === currentPage}
+            onClick={() => handleNavigate(item.page)}
+            sx={{
+              mx: 1,
+              my: 0.25,
+              py: 0.65,
+              borderRadius: 1.5,
+              color: "white",
+              "&.Mui-selected": {
+                backgroundColor: "rgba(255,255,255,0.16)",
+              },
+              "&.Mui-selected:hover": {
+                backgroundColor: "rgba(255,255,255,0.22)",
+              },
+              "&:hover": {
+                backgroundColor: "rgba(255,255,255,0.1)",
+              },
+            }}
+          >
+            <ListItemIcon sx={{ color: "inherit", minWidth: 34 }}>
+              {item.icon}
+            </ListItemIcon>
+            <ListItemText
+              primary={item.label}
+              primaryTypographyProps={{ fontSize: 13 }}
+            />
+          </ListItemButton>
+        ))}
+      </List>
+    </>
+  );
 
   return (
     <Box sx={{ display: "flex" }}>
@@ -77,15 +131,11 @@ export default function DashboardLayout({
       >
         <Toolbar sx={{ justifyContent: "space-between", gap: 1 }}>
           <Stack direction="row" spacing={1.5} alignItems="center">
-            <IconButton
-              edge="start"
-              onClick={(event) => setMobileMenuAnchor(event.currentTarget)}
-              sx={{ display: { xs: "inline-flex", md: "none" } }}
-            >
+            <IconButton edge="start" onClick={() => setDrawerOpen(true)}>
               <MenuIcon />
             </IconButton>
 
-            <Typography variant="h6" noWrap fontWeight={700}>
+            <Typography variant="h6" noWrap fontWeight={800}>
               Residency Scheduler
             </Typography>
           </Stack>
@@ -113,31 +163,14 @@ export default function DashboardLayout({
             </Button>
           </Stack>
         </Toolbar>
-
-        <Menu
-          anchorEl={mobileMenuAnchor}
-          open={Boolean(mobileMenuAnchor)}
-          onClose={() => setMobileMenuAnchor(null)}
-        >
-          {navItems.map((item) => (
-            <MenuItem
-              key={item.page}
-              selected={item.page === currentPage}
-              onClick={() => handleMobileNavigate(item.page)}
-            >
-              <ListItemIcon>{item.icon}</ListItemIcon>
-              <ListItemText>{item.label}</ListItemText>
-            </MenuItem>
-          ))}
-        </Menu>
       </AppBar>
 
       <Drawer
-        variant="permanent"
+        variant="temporary"
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        ModalProps={{ keepMounted: true }}
         sx={{
-          display: { xs: "none", md: "block" },
-          width: drawerWidth,
-          flexShrink: 0,
           [`& .MuiDrawer-paper`]: {
             width: drawerWidth,
             boxSizing: "border-box",
@@ -146,49 +179,7 @@ export default function DashboardLayout({
           },
         }}
       >
-        <Toolbar />
-
-        <Box sx={{ p: 2 }}>
-          <Typography variant="overline" sx={{ color: "#94a3b8" }}>
-            Main Menu
-          </Typography>
-        </Box>
-
-        <Divider sx={{ borderColor: "rgba(255,255,255,0.12)" }} />
-
-        <List>
-          {navItems.map((item) => (
-            <ListItemButton
-              key={item.page}
-              selected={item.page === currentPage}
-              onClick={() => onPageChange(item.page)}
-              sx={{
-                mx: 1,
-                my: 0.4,
-                py: 0.8,
-                borderRadius: 2,
-                color: "white",
-                "&.Mui-selected": {
-                  backgroundColor: "rgba(255,255,255,0.14)",
-                },
-                "&.Mui-selected:hover": {
-                  backgroundColor: "rgba(255,255,255,0.2)",
-                },
-                "&:hover": {
-                  backgroundColor: "rgba(255,255,255,0.1)",
-                },
-              }}
-            >
-              <ListItemIcon sx={{ color: "inherit", minWidth: 36 }}>
-                {item.icon}
-              </ListItemIcon>
-              <ListItemText
-                primary={item.label}
-                primaryTypographyProps={{ fontSize: 14 }}
-              />
-            </ListItemButton>
-          ))}
-        </List>
+        {drawerContent}
       </Drawer>
 
       <Box
@@ -197,7 +188,7 @@ export default function DashboardLayout({
           flexGrow: 1,
           minHeight: "100vh",
           backgroundColor: "#f8fafc",
-          p: { xs: 1.5, sm: 2, md: 3 },
+          p: { xs: 1.5, sm: 2, md: 2 },
           width: "100%",
         }}
       >

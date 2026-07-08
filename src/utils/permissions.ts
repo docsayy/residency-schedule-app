@@ -1,17 +1,19 @@
 import type { AppRole } from "../types/userProfile";
 
-export function canManageResidents(role?: AppRole | null) {
+function normalizeRole(role?: AppRole | string | null) {
+  return (role || "").trim().toLowerCase();
+}
+
+export function canManageResidents(role?: AppRole | string | null) {
+  const normalized = normalizeRole(role);
+
   return (
-    role === "Admin" ||
-    role === "Chief Resident" ||
-    role === "Program Coordinator"
+    normalized === "admin" ||
+    normalized === "chief resident" ||
+    normalized === "program coordinator"
   );
 }
 
-export function canBuildSchedule(role?: AppRole | null) {
-  return (
-    role === "Admin" ||
-    role === "Chief Resident" ||
-    role === "Program Coordinator"
-  );
+export function canBuildSchedule(role?: AppRole | string | null) {
+  return canManageResidents(role);
 }

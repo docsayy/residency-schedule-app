@@ -3,10 +3,16 @@ import { Box, CircularProgress, Typography } from "@mui/material";
 
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import DashboardLayout from "./layouts/DashboardLayout";
+
 import LoginPage from "./pages/LoginPage";
-import ResidentsPage from "./pages/ResidentsPage";
-import SchedulePage from "./pages/SchedulePage";
 import WhosOnPage from "./pages/WhosOnPage";
+import ResidentsPage from "./pages/ResidentsPage";
+import AttendingsPage from "./pages/AttendingsPage";
+import AttendingCallSchedulePage from "./pages/AttendingCallSchedulePage";
+import ServicesPage from "./pages/ServicesPage";
+import MonthlyScheduleMatrixPage from "./pages/MonthlyScheduleMatrixPage";
+import BlockSchedulePage from "./pages/BlockSchedulePage";
+
 import type { AppPage } from "./types/page";
 
 function PlaceholderPage({ title }: { title: string }) {
@@ -15,8 +21,9 @@ function PlaceholderPage({ title }: { title: string }) {
       <Typography variant="h4" fontWeight={800}>
         {title}
       </Typography>
+
       <Typography color="text.secondary" sx={{ mt: 1 }}>
-        This section will be built next.
+        This section is currently under development.
       </Typography>
     </Box>
   );
@@ -48,10 +55,13 @@ function AppContent() {
   const pageContent = {
     "whos-on": <WhosOnPage />,
     residents: <ResidentsPage />,
-    schedule: <SchedulePage />,
-    "block-schedule": <PlaceholderPage title="Block Schedule" />,
+    attendings: <AttendingsPage />,
+    "attending-call-schedule": <AttendingCallSchedulePage />,
+    services: <ServicesPage />,
+    schedule: <MonthlyScheduleMatrixPage />,
+    "block-schedule": <BlockSchedulePage />,
     "call-swaps": <PlaceholderPage title="Call Swaps" />,
-    vacation: <PlaceholderPage title="Vacation Requests" />,
+    vacation: <PlaceholderPage title="Vacation" />,
     settings: <PlaceholderPage title="Settings" />,
   }[currentPage];
 
@@ -62,12 +72,10 @@ function AppContent() {
   );
 }
 
-function App() {
+export default function App() {
   return (
     <AuthProvider>
       <AppContent />
     </AuthProvider>
   );
 }
-
-export default App;
