@@ -17,6 +17,10 @@ import {
   Typography,
 } from "@mui/material";
 
+import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
+import ChevronRightIcon from "@mui/icons-material/ChevronRight";
+import TodayIcon from "@mui/icons-material/Today";
+
 import { useAuth } from "../context/AuthContext";
 import { useAcademicBlocks } from "../hooks/useAcademicBlocks";
 import { useBlockAssignments } from "../hooks/useBlockAssignments";
@@ -27,7 +31,7 @@ import type {
   ScheduleService,
   ShiftType,
 } from "../types/schedule";
-import type { MonthlyScheduleCell } from "../types/monthSchedule";
+import type { MonthlySchedule, MonthlyScheduleCell } from "../types/monthSchedule";
 import { canBuildSchedule } from "../utils/permissions";
 import {
   EXACT_NF_SERVICE_IDS,
@@ -95,19 +99,55 @@ function makeService(
   };
 }
 
-function getCurrentMonthId() {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+function toDateInputValue(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
-function getDaysInMonth(monthId: string) {
-  const [year, month] = monthId.split("-").map(Number);
-  const lastDay = new Date(year, month, 0).getDate();
+function getCurrentMonthId() {
+  return toDateInputValue(new Date()).slice(0, 7);
+}
 
-  return Array.from({ length: lastDay }, (_, index) => {
-    const day = index + 1;
-    return `${monthId}-${String(day).padStart(2, "0")}`;
-  });
+function getMonthIdFromDate(date: string) {
+  return date.slice(0, 7);
+}
+
+function addDays(date: Date, days: number) {
+  const next = new Date(date);
+  next.setDate(next.getDate() + days);
+  return next;
+}
+
+function getWednesdayStart(date: Date) {
+  const current = new Date(date);
+  const day = current.getDay();
+  const diff = day >= 3 ? 3 - day : -4 - day;
+  current.setDate(current.getDate() + diff);
+  return current;
+}
+
+function getWeekDays(weekStartDate: string) {
+  const start = parseLocalDate(weekStartDate);
+  return Array.from({ length: 14 }, (_, index) =>
+    toDateInputValue(addDays(start, index))
+  );
+}
+
+function formatWeekRange(days: string[]) {
+  if (days.length === 0) return "";
+  const first = parseLocalDate(days[0]);
+  const last = parseLocalDate(days[days.length - 1]);
+
+  return `${first.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  })} – ${last.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  })}`;
 }
 
 function isWeekend(date: string) {
@@ -133,18 +173,16 @@ function serviceIcon(service: string) {
   return "🏥";
 }
 
-function levelChipColor(level: string) {
-  if (level.includes("PGY-1")) return { color: "#dc2626", bg: "#fff1f2", border: "#fecdd3" };
-  if (level.includes("PGY-2")) return { color: "#2563eb", bg: "#eff6ff", border: "#bfdbfe" };
-  if (level.includes("PGY-3")) return { color: "#15803d", bg: "#ecfdf5", border: "#bbf7d0" };
-  return { color: "#475569", bg: "#f8fafc", border: "#e2e8f0" };
-}
-
 export default function MonthlyScheduleMatrixPage() {
   const { profile } = useAuth();
   const allowBuild = canBuildSchedule(profile?.role);
 
-  const [monthId, setMonthId] = useState(getCurrentMonthId());
+  const [weekStartDate, setWeekStartDate] = useState(
+    toDateInputValue(getWednesdayStart(new Date()))
+  );
+
+  const monthId = getMonthIdFromDate(weekStartDate);
+
   const [editingCell, setEditingCell] = useState<{
     date: string;
     service: ScheduleService;
@@ -154,11 +192,20 @@ export default function MonthlyScheduleMatrixPage() {
   const { blocks } = useAcademicBlocks();
   const { assignments: blockAssignments } = useBlockAssignments();
 
-  const { schedule, loading, saving, error, updateCell, removeCell } =
-    useMonthlySchedule(monthId);
+  const {
+    schedule,
+    loading,
+    saving,
+    error,
+    updateCell,
+    removeCell,
+    saveSchedule,
+  } = useMonthlySchedule(monthId);
 
-  const days = useMemo(() => getDaysInMonth(monthId), [monthId]);
+  const days = useMemo(() => getWeekDays(weekStartDate), [weekStartDate]);
   const monthlyAssignments = schedule?.assignments || {};
+  const isPublished = schedule?.status === "published";
+  const canViewSchedule = allowBuild || isPublished;
 
   const scheduleIssues = useMemo(() => {
     return days.flatMap((date) =>
@@ -256,13 +303,37 @@ export default function MonthlyScheduleMatrixPage() {
     await removeCell(date, serviceId);
   }
 
+  async function handlePublish(status: MonthlySchedule["status"]) {
+    if (!allowBuild || !schedule) return;
+    await saveSchedule({
+      ...schedule,
+      status,
+    });
+  }
+
+  function goPreviousWeek() {
+    setWeekStartDate((current) =>
+      toDateInputValue(addDays(parseLocalDate(current), -14))
+    );
+  }
+
+  function goNextWeek() {
+    setWeekStartDate((current) =>
+      toDateInputValue(addDays(parseLocalDate(current), 14))
+    );
+  }
+
+  function goToday() {
+    setWeekStartDate(toDateInputValue(getWednesdayStart(new Date())));
+  }
+
   return (
     <Box>
       <Stack
-        direction={{ xs: "column", md: "row" }}
+        direction={{ xs: "column", lg: "row" }}
         spacing={1.5}
         justifyContent="space-between"
-        alignItems={{ xs: "stretch", md: "center" }}
+        alignItems={{ xs: "stretch", lg: "center" }}
         sx={{ mb: 2 }}
       >
         <Box>
@@ -270,30 +341,79 @@ export default function MonthlyScheduleMatrixPage() {
             Daily Call Schedule
           </Typography>
           <Typography color="text.secondary" fontSize={14}>
-            Resident calls with conflict warnings and editable night-float overrides.
+            Two-week resident call schedule. Drafts are hidden from regular residents until published.
           </Typography>
         </Box>
 
-        <TextField
-          label="Month"
-          type="month"
-          size="small"
-          value={monthId}
-          onChange={(e) => setMonthId(e.target.value)}
-          InputLabelProps={{ shrink: true }}
-          sx={{ width: 180 }}
-        />
+        <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
+          <Button variant="outlined" onClick={goPreviousWeek}>
+            <ChevronLeftIcon />
+          </Button>
+
+          <Box
+            sx={{
+              height: 40,
+              px: 2,
+              borderRadius: 2,
+              fontWeight: 850,
+              display: "grid",
+              placeItems: "center",
+              backgroundColor: "#f8fafc",
+              border: "1px solid",
+              borderColor: "divider",
+              fontSize: 14,
+            }}
+          >
+            {formatWeekRange(days)}
+          </Box>
+
+          <Button variant="outlined" onClick={goNextWeek}>
+            <ChevronRightIcon />
+          </Button>
+
+          <Button
+            variant="outlined"
+            startIcon={<TodayIcon />}
+            onClick={goToday}
+            sx={{ textTransform: "none", fontWeight: 800 }}
+          >
+            Current
+          </Button>
+
+          {allowBuild && (
+            <Button
+              variant={isPublished ? "outlined" : "contained"}
+              color={isPublished ? "warning" : "primary"}
+              onClick={() => handlePublish(isPublished ? "draft" : "published")}
+              sx={{ textTransform: "none", fontWeight: 850 }}
+            >
+              {isPublished ? "Unpublish Month" : "Publish Month"}
+            </Button>
+          )}
+        </Stack>
       </Stack>
 
-      {!allowBuild && (
+      {!allowBuild && !isPublished && (
+        <Alert severity="warning" sx={{ mb: 2 }}>
+          This schedule has not been published yet. Please check back after the chief or coordinator publishes it.
+        </Alert>
+      )}
+
+      {!allowBuild && isPublished && (
         <Alert severity="info" sx={{ mb: 2 }}>
-          You have view-only access. Chiefs, program coordinators, and admins can edit the daily call schedule.
+          You have view-only access.
+        </Alert>
+      )}
+
+      {allowBuild && (
+        <Alert severity={isPublished ? "success" : "warning"} sx={{ mb: 2 }}>
+          Month status: <b>{isPublished ? "Published" : "Draft"}</b>. Regular residents can only see published schedules.
         </Alert>
       )}
 
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
-      <ScheduleIssuesPanel issues={scheduleIssues} />
+      {canViewSchedule && allowBuild && <ScheduleIssuesPanel issues={scheduleIssues} />}
 
       <Card sx={{ borderRadius: 3, boxShadow: "0 10px 30px rgba(15, 23, 42, 0.08)" }}>
         <CardContent sx={{ p: 1.25 }}>
@@ -304,11 +424,15 @@ export default function MonthlyScheduleMatrixPage() {
                 Loading daily call schedule...
               </Typography>
             </Stack>
+          ) : !canViewSchedule ? (
+            <Typography color="text.secondary" sx={{ p: 2 }}>
+              Schedule is not published yet.
+            </Typography>
           ) : (
             <Box
               sx={{
                 overflow: "auto",
-                maxHeight: "calc(100vh - 235px)",
+                maxHeight: "calc(100vh - 245px)",
                 border: "1px solid",
                 borderColor: "divider",
                 borderRadius: 2,
@@ -334,7 +458,7 @@ export default function MonthlyScheduleMatrixPage() {
                         {formatDay(day)}
                       </Typography>
 
-                      {dayIssues.length > 0 && (
+                      {allowBuild && dayIssues.length > 0 && (
                         <Box
                           sx={{
                             mt: 0.35,
@@ -384,21 +508,23 @@ export default function MonthlyScheduleMatrixPage() {
                           key={`${service.id}-${day}`}
                           sx={{
                             ...matrixCell,
-                            backgroundColor: hasCriticalIssue
-                              ? "#fff1f2"
-                              : hasWarningIssue
-                                ? "#fffbeb"
-                                : autoCell
-                                  ? "#f5f3ff"
-                                  : weekend
-                                    ? "#fff7ed"
-                                    : "white",
+                            backgroundColor:
+                              allowBuild && hasCriticalIssue
+                                ? "#fff1f2"
+                                : allowBuild && hasWarningIssue
+                                  ? "#fffbeb"
+                                  : autoCell
+                                    ? "#f5f3ff"
+                                    : weekend
+                                      ? "#fff7ed"
+                                      : "white",
                             cursor: allowBuild ? "pointer" : "default",
-                            boxShadow: hasCriticalIssue
-                              ? "inset 0 0 0 2px #fecdd3"
-                              : hasWarningIssue
-                                ? "inset 0 0 0 2px #fde68a"
-                                : "none",
+                            boxShadow:
+                              allowBuild && hasCriticalIssue
+                                ? "inset 0 0 0 2px #fecdd3"
+                                : allowBuild && hasWarningIssue
+                                  ? "inset 0 0 0 2px #fde68a"
+                                  : "none",
                           }}
                           onClick={() => {
                             if (!allowBuild) return;
@@ -407,13 +533,11 @@ export default function MonthlyScheduleMatrixPage() {
                         >
                           {cell ? (
                             <Stack spacing={0.25}>
-                              <Typography fontWeight={750} fontSize={12}>
+                              <Typography fontWeight={800} fontSize={12}>
                                 {cell.residentName}
                               </Typography>
 
-                              <LevelChip level={cell.training} />
-
-                              {hasCriticalIssue && (
+                              {allowBuild && hasCriticalIssue && (
                                 <Chip
                                   label="Issue"
                                   size="small"
@@ -427,7 +551,7 @@ export default function MonthlyScheduleMatrixPage() {
                                 />
                               )}
 
-                              {!hasCriticalIssue && hasWarningIssue && (
+                              {allowBuild && !hasCriticalIssue && hasWarningIssue && (
                                 <Chip
                                   label="Warning"
                                   size="small"
@@ -439,40 +563,6 @@ export default function MonthlyScheduleMatrixPage() {
                                     backgroundColor: "#fef3c7",
                                   }}
                                 />
-                              )}
-
-                              {autoCell && (
-                                <Chip
-                                  label="Block NF"
-                                  size="small"
-                                  sx={{
-                                    height: 17,
-                                    fontSize: 9.5,
-                                    fontWeight: 900,
-                                    color: "#6d28d9",
-                                    backgroundColor: "#ede9fe",
-                                  }}
-                                />
-                              )}
-
-                              {manualCell && isNightFloatService(service.id) && (
-                                <Chip
-                                  label="Manual"
-                                  size="small"
-                                  sx={{
-                                    height: 17,
-                                    fontSize: 9.5,
-                                    fontWeight: 900,
-                                    color: "#b45309",
-                                    backgroundColor: "#fef3c7",
-                                  }}
-                                />
-                              )}
-
-                              {cell.pager && (
-                                <Typography variant="caption" color="text.secondary" fontSize={10.5}>
-                                  📟 {cell.pager}
-                                </Typography>
                               )}
 
                               {allowBuild && manualCell && (
@@ -542,7 +632,7 @@ function ScheduleIssuesPanel({ issues }: { issues: ScheduleIssue[] }) {
   if (issues.length === 0) {
     return (
       <Alert severity="success" sx={{ mb: 2, borderRadius: 2 }}>
-        No schedule conflicts detected for this month.
+        No schedule conflicts detected for this visible period.
       </Alert>
     );
   }
@@ -557,9 +647,7 @@ function ScheduleIssuesPanel({ issues }: { issues: ScheduleIssue[] }) {
           sx={{ mb: 1 }}
         >
           <Box>
-            <Typography fontWeight={900}>
-              Schedule Warnings
-            </Typography>
+            <Typography fontWeight={900}>Schedule Warnings</Typography>
             <Typography color="text.secondary" fontSize={12.5}>
               Conflicts are warnings only. They do not block scheduling.
             </Typography>
@@ -573,7 +661,7 @@ function ScheduleIssuesPanel({ issues }: { issues: ScheduleIssue[] }) {
         </Stack>
 
         <Stack spacing={0.6}>
-          {issues.slice(0, 8).map((issue) => {
+          {issues.slice(0, 6).map((issue) => {
             const style = issueSeverityStyle(issue.severity);
 
             return (
@@ -587,38 +675,19 @@ function ScheduleIssuesPanel({ issues }: { issues: ScheduleIssue[] }) {
                   borderColor: style.border,
                 }}
               >
-                <Stack direction={{ xs: "column", md: "row" }} spacing={0.75}>
-                  <Chip
-                    label={style.label}
-                    size="small"
-                    sx={{
-                      width: "fit-content",
-                      height: 20,
-                      fontSize: 10.5,
-                      fontWeight: 900,
-                      color: style.color,
-                      backgroundColor: "#ffffff",
-                      border: "1px solid",
-                      borderColor: style.border,
-                    }}
-                  />
-
-                  <Box>
-                    <Typography fontSize={12.5} fontWeight={900} sx={{ color: style.color }}>
-                      {issue.title}
-                    </Typography>
-                    <Typography fontSize={12} color="text.secondary">
-                      {issue.message}
-                    </Typography>
-                  </Box>
-                </Stack>
+                <Typography fontSize={12.5} fontWeight={900} sx={{ color: style.color }}>
+                  {issue.title}
+                </Typography>
+                <Typography fontSize={12} color="text.secondary">
+                  {issue.message}
+                </Typography>
               </Box>
             );
           })}
 
-          {issues.length > 8 && (
+          {issues.length > 6 && (
             <Typography fontSize={12} color="text.secondary">
-              + {issues.length - 8} more issue{issues.length - 8 === 1 ? "" : "s"}.
+              + {issues.length - 6} more issue{issues.length - 6 === 1 ? "" : "s"}.
             </Typography>
           )}
         </Stack>
@@ -643,27 +712,6 @@ function IssueCountChip({
       label={`${label}: ${count}`}
       size="small"
       sx={{
-        fontWeight: 900,
-        color: style.color,
-        backgroundColor: style.bg,
-        border: "1px solid",
-        borderColor: style.border,
-      }}
-    />
-  );
-}
-
-function LevelChip({ level }: { level: string }) {
-  const style = levelChipColor(level);
-
-  return (
-    <Chip
-      label={level}
-      size="small"
-      sx={{
-        width: "fit-content",
-        height: 18,
-        fontSize: 10.5,
         fontWeight: 900,
         color: style.color,
         backgroundColor: style.bg,
@@ -720,7 +768,7 @@ function MatrixCellDialog({
         <Stack spacing={2} sx={{ mt: 1 }}>
           {isAutoOnly && (
             <Alert severity="info">
-              This is currently auto-filled from the Block Schedule. Saving here will create a manual override for this date.
+              This is currently auto-filled from the Block Schedule. Saving here creates a manual override.
             </Alert>
           )}
 
@@ -860,8 +908,8 @@ const serviceIconBox = {
 };
 
 const matrixCell = {
-  minHeight: 66,
-  p: 0.6,
+  minHeight: 48,
+  p: 0.55,
   borderRight: "1px solid",
   borderBottom: "1px solid",
   borderColor: "divider",

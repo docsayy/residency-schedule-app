@@ -16,6 +16,7 @@ import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import TodayIcon from "@mui/icons-material/Today";
 
+import { useAuth } from "../context/AuthContext";
 import { useAcademicBlocks } from "../hooks/useAcademicBlocks";
 import { useAttendingSchedule } from "../hooks/useAttendingSchedule";
 import { useBlockAssignments } from "../hooks/useBlockAssignments";
@@ -24,6 +25,7 @@ import { useResidents } from "../hooks/useResidents";
 import type { AttendingScheduleAssignment } from "../types/attendingSchedule";
 import type { MonthlyScheduleCell } from "../types/monthSchedule";
 import type { ScheduleService } from "../types/schedule";
+import { canBuildSchedule } from "../utils/permissions";
 import {
   EXACT_NF_SERVICE_IDS,
   getAutoNightFloatCell,
@@ -173,6 +175,9 @@ function isActiveOnDate(assignment: AttendingScheduleAssignment, date: string) {
 }
 
 export default function WhosOnPage() {
+  const { profile } = useAuth();
+  const allowBuild = canBuildSchedule(profile?.role);
+
   const [mode, setMode] = useState<WhosOnMode>("call");
   const [selectedDate, setSelectedDate] = useState(new Date());
 
@@ -194,6 +199,10 @@ export default function WhosOnPage() {
     error: attendingError,
   } = useAttendingSchedule();
 
+  const monthlyAssignments = schedule?.assignments || {};
+  const isResidentCallPublished = schedule?.status === "published";
+  const canViewResidentCall = allowBuild || isResidentCallPublished;
+
   const residentsById = useMemo(() => {
     const map: Record<string, (typeof residents)[number]> = {};
     for (const resident of residents) map[resident.id] = resident;
@@ -206,14 +215,14 @@ export default function WhosOnPage() {
     );
   }, [blocks, selectedDateKey]);
 
-  const monthlyAssignments = schedule?.assignments || {};
-
   const residentCallServices = useMemo(
     () => residentCallRows.map(makeScheduleServiceFromRow),
     []
   );
 
   const todayIssues = useMemo(() => {
+    if (!allowBuild) return [];
+
     return detectDailyScheduleIssues({
       date: selectedDateKey,
       services: residentCallServices,
@@ -223,6 +232,7 @@ export default function WhosOnPage() {
       residents,
     });
   }, [
+    allowBuild,
     blockAssignments,
     blocks,
     monthlyAssignments,
@@ -232,6 +242,8 @@ export default function WhosOnPage() {
   ]);
 
   const callRows = useMemo(() => {
+    if (!canViewResidentCall) return [];
+
     return residentCallRows
       .sort((a, b) => a.order - b.order)
       .map((row) => {
@@ -266,6 +278,7 @@ export default function WhosOnPage() {
   }, [
     blockAssignments,
     blocks,
+    canViewResidentCall,
     monthlyAssignments,
     residents,
     residentsById,
@@ -441,9 +454,15 @@ export default function WhosOnPage() {
 
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
-      {!loading && <TodayIssuesPanel issues={todayIssues} />}
+      {allowBuild && !loading && <TodayIssuesPanel issues={todayIssues} />}
 
-      {mode === "call" && !loading && (
+      {mode === "call" && !loading && !canViewResidentCall && (
+        <Alert severity="warning" sx={{ mb: 2, borderRadius: 2 }}>
+          Resident call schedule is still in draft. Regular residents cannot view it until it is published.
+        </Alert>
+      )}
+
+      {mode === "call" && !loading && canViewResidentCall && (
         <Alert severity="info" sx={{ mb: 2, borderRadius: 2 }}>
           Reading monthly schedule <b>{monthId}</b>. Assigned resident call rows found for this date: <b>{assignedCallCount}</b>.
         </Alert>
@@ -476,6 +495,10 @@ export default function WhosOnPage() {
                 Loading Who&apos;s On...
               </Typography>
             </Stack>
+          ) : mode === "call" && !canViewResidentCall ? (
+            <Typography color="text.secondary" sx={{ p: 2 }}>
+              Resident call schedule is not published yet.
+            </Typography>
           ) : mode === "call" ? (
             <ResidentCallsTable rows={callRows} />
           ) : mode === "all" ? (
@@ -516,7 +539,7 @@ function TodayIssuesPanel({ issues }: { issues: ScheduleIssue[] }) {
           <Box>
             <Typography fontWeight={900}>Today&apos;s Issues</Typography>
             <Typography color="text.secondary" fontSize={12.5}>
-              These are warnings only. They do not block the schedule.
+              Visible to schedule builders only.
             </Typography>
           </Box>
 
