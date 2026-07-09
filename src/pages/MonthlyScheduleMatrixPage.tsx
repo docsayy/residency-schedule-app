@@ -100,14 +100,7 @@ function makeService(
 }
 
 function toDateInputValue(date: Date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
-function getCurrentMonthId() {
-  return toDateInputValue(new Date()).slice(0, 7);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
 
 function getMonthIdFromDate(date: string) {
@@ -173,7 +166,11 @@ function serviceIcon(service: string) {
   return "🏥";
 }
 
-export default function MonthlyScheduleMatrixPage() {
+export default function MonthlyScheduleMatrixPage({
+  onOpenResidentProfile,
+}: {
+  onOpenResidentProfile?: (residentId: string) => void;
+}) {
   const { profile } = useAuth();
   const allowBuild = canBuildSchedule(profile?.role);
 
@@ -328,7 +325,7 @@ export default function MonthlyScheduleMatrixPage() {
   }
 
   return (
-    <Box>
+    <Box sx={{ width: "100%", maxWidth: "none" }}>
       <Stack
         direction={{ xs: "column", lg: "row" }}
         spacing={1.5}
@@ -415,7 +412,7 @@ export default function MonthlyScheduleMatrixPage() {
 
       {canViewSchedule && allowBuild && <ScheduleIssuesPanel issues={scheduleIssues} />}
 
-      <Card sx={{ borderRadius: 3, boxShadow: "0 10px 30px rgba(15, 23, 42, 0.08)" }}>
+      <Card sx={{ borderRadius: 3, boxShadow: "0 10px 30px rgba(15, 23, 42, 0.08)", width: "100%" }}>
         <CardContent sx={{ p: 1.25 }}>
           {loading ? (
             <Stack alignItems="center" sx={{ py: 5 }}>
@@ -436,13 +433,15 @@ export default function MonthlyScheduleMatrixPage() {
                 border: "1px solid",
                 borderColor: "divider",
                 borderRadius: 2,
+                width: "100%",
               }}
             >
               <Box
                 sx={{
                   display: "grid",
-                  gridTemplateColumns: `165px repeat(${days.length}, 105px)`,
-                  minWidth: 165 + days.length * 105,
+                  gridTemplateColumns: `190px repeat(${days.length}, minmax(115px, 1fr))`,
+                  minWidth: 190 + days.length * 115,
+                  width: "100%",
                 }}
               >
                 <Box sx={topLeftCell}>Service</Box>
@@ -533,9 +532,30 @@ export default function MonthlyScheduleMatrixPage() {
                         >
                           {cell ? (
                             <Stack spacing={0.25}>
-                              <Typography fontWeight={800} fontSize={12}>
+                              <Button
+                                variant="text"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onOpenResidentProfile?.(cell.residentId);
+                                }}
+                                sx={{
+                                  p: 0,
+                                  minWidth: 0,
+                                  textTransform: "none",
+                                  justifyContent: "flex-start",
+                                  color: "#0f172a",
+                                  fontWeight: 850,
+                                  fontSize: 12,
+                                  lineHeight: 1.15,
+                                  textAlign: "left",
+                                  "&:hover": {
+                                    backgroundColor: "transparent",
+                                    textDecoration: "underline",
+                                  },
+                                }}
+                              >
                                 {cell.residentName}
-                              </Typography>
+                              </Button>
 
                               {allowBuild && hasCriticalIssue && (
                                 <Chip
@@ -640,12 +660,7 @@ function ScheduleIssuesPanel({ issues }: { issues: ScheduleIssue[] }) {
   return (
     <Card sx={{ mb: 2, borderRadius: 3 }}>
       <CardContent sx={{ p: 1.5 }}>
-        <Stack
-          direction={{ xs: "column", md: "row" }}
-          justifyContent="space-between"
-          spacing={1}
-          sx={{ mb: 1 }}
-        >
+        <Stack direction={{ xs: "column", md: "row" }} justifyContent="space-between" spacing={1} sx={{ mb: 1 }}>
           <Box>
             <Typography fontWeight={900}>Schedule Warnings</Typography>
             <Typography color="text.secondary" fontSize={12.5}>
@@ -665,16 +680,7 @@ function ScheduleIssuesPanel({ issues }: { issues: ScheduleIssue[] }) {
             const style = issueSeverityStyle(issue.severity);
 
             return (
-              <Box
-                key={issue.id}
-                sx={{
-                  p: 0.75,
-                  borderRadius: 2,
-                  backgroundColor: style.bg,
-                  border: "1px solid",
-                  borderColor: style.border,
-                }}
-              >
+              <Box key={issue.id} sx={{ p: 0.75, borderRadius: 2, backgroundColor: style.bg, border: "1px solid", borderColor: style.border }}>
                 <Typography fontSize={12.5} fontWeight={900} sx={{ color: style.color }}>
                   {issue.title}
                 </Typography>
@@ -777,16 +783,7 @@ function MatrixCellDialog({
               {issues.map((issue) => {
                 const style = issueSeverityStyle(issue.severity);
                 return (
-                  <Box
-                    key={issue.id}
-                    sx={{
-                      p: 1,
-                      borderRadius: 2,
-                      backgroundColor: style.bg,
-                      border: "1px solid",
-                      borderColor: style.border,
-                    }}
-                  >
+                  <Box key={issue.id} sx={{ p: 1, borderRadius: 2, backgroundColor: style.bg, border: "1px solid", borderColor: style.border }}>
                     <Typography fontSize={12.5} fontWeight={900} sx={{ color: style.color }}>
                       {issue.title}
                     </Typography>

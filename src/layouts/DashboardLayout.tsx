@@ -27,6 +27,7 @@ import BeachAccessIcon from "@mui/icons-material/BeachAccess";
 import SettingsIcon from "@mui/icons-material/Settings";
 import LogoutIcon from "@mui/icons-material/Logout";
 import LocalHospitalIcon from "@mui/icons-material/LocalHospital";
+import MenuBookIcon from "@mui/icons-material/MenuBook";
 
 import { useAuth } from "../context/AuthContext";
 import type { AppPage } from "../types/page";
@@ -44,6 +45,7 @@ const navItems: { label: string; page: AppPage; icon: React.ReactNode }[] = [
   },
   { label: "Daily Call Schedule", page: "schedule", icon: <CalendarMonthIcon /> },
   { label: "Block Schedule", page: "block-schedule", icon: <ViewWeekIcon /> },
+  { label: "Coverage Rules", page: "coverage-rules", icon: <MenuBookIcon /> },
   { label: "Call Swaps", page: "call-swaps", icon: <SwapHorizIcon /> },
   { label: "Vacation", page: "vacation", icon: <BeachAccessIcon /> },
   { label: "Settings", page: "settings", icon: <SettingsIcon /> },

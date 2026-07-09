@@ -26,6 +26,7 @@ import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import ToggleOffIcon from "@mui/icons-material/ToggleOff";
 import ToggleOnIcon from "@mui/icons-material/ToggleOn";
+import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
 
 import { useAuth } from "../context/AuthContext";
 import { useResidents } from "../hooks/useResidents";
@@ -47,7 +48,11 @@ const emptyResident: Resident = {
   active: true,
 };
 
-export default function ResidentsPage() {
+export default function ResidentsPage({
+  onOpenResidentProfile,
+}: {
+  onOpenResidentProfile?: (residentId: string) => void;
+}) {
   const { profile } = useAuth();
   const allowManage = canManageResidents(profile?.role);
 
@@ -141,7 +146,7 @@ export default function ResidentsPage() {
             Residents
           </Typography>
           <Typography color="text.secondary">
-            Compact resident roster and profile controls.
+            Click a resident name to open their monthly calendar and block schedule.
           </Typography>
         </Box>
 
@@ -207,13 +212,13 @@ export default function ResidentsPage() {
             </Stack>
           ) : (
             <Box sx={{ overflowX: "auto" }}>
-              <Box sx={{ minWidth: allowManage ? 780 : 620 }}>
+              <Box sx={{ minWidth: allowManage ? 850 : 680 }}>
                 <Box
                   sx={{
                     display: "grid",
                     gridTemplateColumns: allowManage
-                      ? "minmax(190px,1.5fr) 100px 150px 100px 150px"
-                      : "minmax(190px,1.5fr) 100px 150px 100px",
+                      ? "minmax(220px,1.5fr) 100px 150px 100px 190px"
+                      : "minmax(220px,1.5fr) 100px 150px 100px",
                     gap: 1,
                     px: 1,
                     py: 0.75,
@@ -234,8 +239,8 @@ export default function ResidentsPage() {
                     sx={{
                       display: "grid",
                       gridTemplateColumns: allowManage
-                        ? "minmax(190px,1.5fr) 100px 150px 100px 150px"
-                        : "minmax(190px,1.5fr) 100px 150px 100px",
+                        ? "minmax(220px,1.5fr) 100px 150px 100px 190px"
+                        : "minmax(220px,1.5fr) 100px 150px 100px",
                       gap: 1,
                       alignItems: "center",
                       px: 1,
@@ -247,10 +252,27 @@ export default function ResidentsPage() {
                     }}
                   >
                     <Box>
-                      <Typography fontSize={13.5} fontWeight={750}>
+                      <Button
+                        variant="text"
+                        onClick={() => onOpenResidentProfile?.(resident.id)}
+                        sx={{
+                          p: 0,
+                          minWidth: 0,
+                          textTransform: "none",
+                          fontSize: 13.5,
+                          fontWeight: 850,
+                          color: "#0f172a",
+                          justifyContent: "flex-start",
+                          "&:hover": {
+                            backgroundColor: "transparent",
+                            textDecoration: "underline",
+                          },
+                        }}
+                      >
                         {resident.displayName}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
+                      </Button>
+
+                      <Typography variant="caption" color="text.secondary" display="block">
                         {resident.email || `${resident.firstName} ${resident.lastName}`}
                       </Typography>
                     </Box>
@@ -287,6 +309,16 @@ export default function ResidentsPage() {
 
                     {allowManage && (
                       <Stack direction="row" spacing={0.25} alignItems="center">
+                        <Tooltip title="Open schedule profile">
+                          <IconButton
+                            size="small"
+                            color="primary"
+                            onClick={() => onOpenResidentProfile?.(resident.id)}
+                          >
+                            <CalendarMonthIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+
                         <Tooltip title="Edit">
                           <IconButton
                             size="small"

@@ -11,6 +11,8 @@ import AttendingsPage from "./pages/AttendingsPage";
 import AttendingCallSchedulePage from "./pages/AttendingCallSchedulePage";
 import MonthlyScheduleMatrixPage from "./pages/MonthlyScheduleMatrixPage";
 import BlockSchedulePage from "./pages/BlockSchedulePage";
+import ResidentScheduleProfilePage from "./pages/ResidentScheduleProfilePage";
+import CoverageRulesPage from "./pages/CoverageRulesPage";
 
 import type { AppPage } from "./types/page";
 
@@ -31,6 +33,7 @@ function PlaceholderPage({ title }: { title: string }) {
 function AppContent() {
   const { user, profile, loading } = useAuth();
   const [currentPage, setCurrentPage] = useState<AppPage>("whos-on");
+  const [selectedResidentId, setSelectedResidentId] = useState<string | null>(null);
 
   if (loading) {
     return (
@@ -51,20 +54,39 @@ function AppContent() {
     return <LoginPage />;
   }
 
-  const pageContent = {
-    "whos-on": <WhosOnPage />,
-    residents: <ResidentsPage />,
-    attendings: <AttendingsPage />,
-    "attending-call-schedule": <AttendingCallSchedulePage />,
-    schedule: <MonthlyScheduleMatrixPage />,
-    "block-schedule": <BlockSchedulePage />,
-    "call-swaps": <PlaceholderPage title="Call Swaps" />,
-    vacation: <PlaceholderPage title="Vacation" />,
-    settings: <PlaceholderPage title="Settings" />,
-  }[currentPage];
+  function handlePageChange(page: AppPage) {
+    setCurrentPage(page);
+    setSelectedResidentId(null);
+  }
+
+  const pageContent = selectedResidentId ? (
+    <ResidentScheduleProfilePage
+      residentId={selectedResidentId}
+      onBack={() => setSelectedResidentId(null)}
+    />
+  ) : (
+    {
+      "whos-on": <WhosOnPage onOpenResidentProfile={setSelectedResidentId} />,
+      residents: <ResidentsPage onOpenResidentProfile={setSelectedResidentId} />,
+      attendings: <AttendingsPage />,
+      "attending-call-schedule": <AttendingCallSchedulePage />,
+      schedule: (
+        <MonthlyScheduleMatrixPage
+          onOpenResidentProfile={setSelectedResidentId}
+        />
+      ),
+      "block-schedule": (
+        <BlockSchedulePage onOpenResidentProfile={setSelectedResidentId} />
+      ),
+      "coverage-rules": <CoverageRulesPage />,
+      "call-swaps": <PlaceholderPage title="Call Swaps" />,
+      vacation: <PlaceholderPage title="Vacation" />,
+      settings: <PlaceholderPage title="Settings" />,
+    }[currentPage]
+  );
 
   return (
-    <DashboardLayout currentPage={currentPage} onPageChange={setCurrentPage}>
+    <DashboardLayout currentPage={currentPage} onPageChange={handlePageChange}>
       {pageContent}
     </DashboardLayout>
   );

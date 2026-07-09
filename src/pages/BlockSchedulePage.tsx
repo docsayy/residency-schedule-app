@@ -79,6 +79,7 @@ function rotationColor(rotationName: string) {
   if (lower.includes("tele")) return { bg: "#f0fdfa", color: "#0f766e", border: "#99f6e4" };
   if (lower.includes("ambulatory") || lower.includes("clinic")) return { bg: "#ecfdf5", color: "#15803d", border: "#bbf7d0" };
   if (lower.includes("vacation")) return { bg: "#fff7ed", color: "#c2410c", border: "#fed7aa" };
+  if (lower.includes("elective")) return { bg: "#f5f3ff", color: "#7c3aed", border: "#ddd6fe" };
   if (lower.includes("nf") || lower.includes("night")) return { bg: "#eef2ff", color: "#4338ca", border: "#c7d2fe" };
   if (lower.includes("jeopardy")) return { bg: "#fefce8", color: "#a16207", border: "#fde68a" };
 
@@ -269,7 +270,11 @@ function buildBlockValidations({
   });
 }
 
-export default function BlockSchedulePage() {
+export default function BlockSchedulePage({
+  onOpenResidentProfile,
+}: {
+  onOpenResidentProfile?: (residentId: string) => void;
+}) {
   const { profile } = useAuth();
   const allowBuild = canBuildSchedule(profile?.role);
 
@@ -536,7 +541,7 @@ export default function BlockSchedulePage() {
   }
 
   return (
-    <Box>
+    <Box sx={{ width: "100%", maxWidth: "none" }}>
       <Stack
         direction={{ xs: "column", md: "row" }}
         justifyContent="space-between"
@@ -661,7 +666,7 @@ export default function BlockSchedulePage() {
         </CardContent>
       </Card>
 
-      <Card sx={{ mb: 2, borderRadius: 3, boxShadow: "0 10px 30px rgba(15, 23, 42, 0.08)" }}>
+      <Card sx={{ mb: 2, borderRadius: 3, boxShadow: "0 10px 30px rgba(15, 23, 42, 0.08)", width: "100%" }}>
         <CardContent sx={{ p: 1.25 }}>
           {pageLoading ? (
             <Stack alignItems="center" sx={{ py: 5 }}>
@@ -682,13 +687,15 @@ export default function BlockSchedulePage() {
                 border: "1px solid",
                 borderColor: "divider",
                 borderRadius: 2,
+                width: "100%",
               }}
             >
               <Box
                 sx={{
                   display: "grid",
-                  gridTemplateColumns: `155px repeat(${displayedBlocks.length}, 108px)`,
-                  minWidth: 155 + displayedBlocks.length * 108,
+                  gridTemplateColumns: `190px repeat(${displayedBlocks.length}, minmax(118px, 1fr))`,
+                  minWidth: 190 + displayedBlocks.length * 118,
+                  width: "100%",
                 }}
               >
                 <Box sx={topLeftCell}>Resident</Box>
@@ -724,10 +731,28 @@ export default function BlockSchedulePage() {
                 {activeResidents.map((resident) => (
                   <Box key={resident.id} sx={{ display: "contents" }}>
                     <Box sx={residentCell}>
-                      <Typography fontWeight={800} fontSize={12}>
+                      <Button
+                        variant="text"
+                        onClick={() => onOpenResidentProfile?.(resident.id)}
+                        sx={{
+                          p: 0,
+                          minWidth: 0,
+                          textTransform: "none",
+                          justifyContent: "flex-start",
+                          color: "#0f172a",
+                          fontWeight: 850,
+                          fontSize: 12,
+                          textAlign: "left",
+                          lineHeight: 1.1,
+                          "&:hover": {
+                            backgroundColor: "transparent",
+                            textDecoration: "underline",
+                          },
+                        }}
+                      >
                         {resident.displayName}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary" fontSize={10.5}>
+                      </Button>
+                      <Typography variant="caption" color="text.secondary" fontSize={10.5} display="block">
                         {resident.pgy}
                       </Typography>
                     </Box>
@@ -832,7 +857,7 @@ export default function BlockSchedulePage() {
                     key={resident.id}
                     sx={{
                       display: "grid",
-                      gridTemplateColumns: { xs: "1fr", md: "160px 1fr" },
+                      gridTemplateColumns: { xs: "1fr", md: "190px 1fr" },
                       gap: 1,
                       alignItems: "center",
                       borderBottom: "1px solid",
@@ -841,10 +866,26 @@ export default function BlockSchedulePage() {
                     }}
                   >
                     <Box>
-                      <Typography fontSize={13} fontWeight={800}>
+                      <Button
+                        variant="text"
+                        onClick={() => onOpenResidentProfile?.(resident.id)}
+                        sx={{
+                          p: 0,
+                          minWidth: 0,
+                          textTransform: "none",
+                          justifyContent: "flex-start",
+                          color: "#0f172a",
+                          fontWeight: 850,
+                          fontSize: 13,
+                          "&:hover": {
+                            backgroundColor: "transparent",
+                            textDecoration: "underline",
+                          },
+                        }}
+                      >
                         {resident.displayName}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
+                      </Button>
+                      <Typography variant="caption" color="text.secondary" display="block">
                         {resident.pgy}
                       </Typography>
                     </Box>
@@ -934,6 +975,7 @@ export default function BlockSchedulePage() {
 
             <Typography variant="caption" color="text.secondary">
               Block 1 starts July 1. Next blocks start Thursday. Last block ends June 30.
+              Click Seed / Update Rotations once if Elective is not showing in the dropdown.
             </Typography>
           </CardContent>
         </Card>

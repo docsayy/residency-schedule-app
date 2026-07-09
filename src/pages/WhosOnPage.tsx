@@ -49,7 +49,6 @@ const residentCallRows = [
   { ids: ["micu-pgy1", "micu-intern"], names: ["MICU PGY1", "MICU Intern"], name: "MICU PGY1", time: "7a-7a", level: "PGY-1", order: 7 },
   { ids: ["micu-senior"], names: ["MICU Senior"], name: "MICU Senior", time: "8a-8a", level: "PGY-2, PGY-3", order: 8 },
   { ids: ["chief-on-call"], names: ["Chief On Call"], name: "Chief On Call", time: "7a-7p", level: "PGY-3", order: 9 },
-
   { ids: [EXACT_NF_SERVICE_IDS.pgy1FourNorthThreeWest, "weekend-nf-intern-1"], names: ["4N-3W PGY1 NF", "Weekend NF Intern 1"], name: "4N-3W PGY1 NF", time: "7p-7a", level: "PGY-1", order: 10 },
   { ids: [EXACT_NF_SERVICE_IDS.pgy2FourNorthThreeWest, "weekend-nf-senior-1"], names: ["4N-3W PGY2 NF", "Weekend NF Senior 1"], name: "4N-3W PGY2 NF", time: "7p-7a", level: "PGY-2", order: 11 },
   { ids: [EXACT_NF_SERVICE_IDS.pgy1TwoNorthCcu, "weekend-nf-intern-2"], names: ["2N-CCU PGY1 NF", "2N CCU PGY1 NF", "Weekend NF Intern 2"], name: "2N-CCU PGY1 NF", time: "7p-7a", level: "PGY-1", order: 12 },
@@ -58,10 +57,7 @@ const residentCallRows = [
 ];
 
 function toDateInputValue(date: Date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
 
 function toMonthId(date: Date) {
@@ -110,9 +106,7 @@ function findMonthlyCell(
   });
 }
 
-function makeScheduleServiceFromRow(
-  row: (typeof residentCallRows)[number]
-): ScheduleService {
+function makeScheduleServiceFromRow(row: (typeof residentCallRows)[number]): ScheduleService {
   const isNight = row.time.includes("7p");
   const firstId = row.ids[0];
 
@@ -174,7 +168,11 @@ function isActiveOnDate(assignment: AttendingScheduleAssignment, date: string) {
   return assignment.startDate <= date && assignment.endDate >= date;
 }
 
-export default function WhosOnPage() {
+export default function WhosOnPage({
+  onOpenResidentProfile,
+}: {
+  onOpenResidentProfile?: (residentId: string) => void;
+}) {
   const { profile } = useAuth();
   const allowBuild = canBuildSchedule(profile?.role);
 
@@ -206,6 +204,14 @@ export default function WhosOnPage() {
   const residentsById = useMemo(() => {
     const map: Record<string, (typeof residents)[number]> = {};
     for (const resident of residents) map[resident.id] = resident;
+    return map;
+  }, [residents]);
+
+  const residentIdByName = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const resident of residents) {
+      map[normalizeText(resident.displayName)] = resident.id;
+    }
     return map;
   }, [residents]);
 
@@ -264,15 +270,14 @@ export default function WhosOnPage() {
         const cell = manualCell || autoCell;
         const resident = cell?.residentId ? residentsById[cell.residentId] : undefined;
 
-        const rowIssues = todayIssues.filter((issue) => issue.serviceId === service.id);
-
         return {
           service: row.name,
           time: row.time,
           name: cell?.residentName || "",
+          residentId: cell?.residentId || "",
           level: cell?.training || row.level,
           pager: cell?.pager || resident?.pager || "",
-          issues: rowIssues,
+          issues: todayIssues.filter((issue) => issue.serviceId === service.id),
         };
       });
   }, [
@@ -325,6 +330,7 @@ export default function WhosOnPage() {
         return {
           service: item.rotationName,
           name: item.residentName,
+          residentId: item.residentId,
           level: resident?.pgy || "Resident",
         };
       });
@@ -366,8 +372,13 @@ export default function WhosOnPage() {
     minute: "2-digit",
   });
 
+  function openResidentByName(name: string, residentId?: string) {
+    const id = residentId || residentIdByName[normalizeText(name)];
+    if (id) onOpenResidentProfile?.(id);
+  }
+
   return (
-    <Box sx={{ maxWidth: 1500, mx: "auto" }}>
+    <Box sx={{ width: "100%", maxWidth: "none" }}>
       <Stack
         direction={{ xs: "column", lg: "row" }}
         spacing={2}
@@ -486,7 +497,7 @@ export default function WhosOnPage() {
         </Alert>
       )}
 
-      <Card sx={{ borderRadius: 3, boxShadow: "0 10px 30px rgba(15, 23, 42, 0.08)" }}>
+      <Card sx={{ borderRadius: 3, boxShadow: "0 10px 30px rgba(15, 23, 42, 0.08)", width: "100%" }}>
         <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
           {loading ? (
             <Stack alignItems="center" sx={{ py: 5 }}>
@@ -500,9 +511,9 @@ export default function WhosOnPage() {
               Resident call schedule is not published yet.
             </Typography>
           ) : mode === "call" ? (
-            <ResidentCallsTable rows={callRows} />
+            <ResidentCallsTable rows={callRows} onOpenResident={openResidentByName} />
           ) : mode === "all" ? (
-            <AllServicesTable rows={allServiceRows} />
+            <AllServicesTable rows={allServiceRows} onOpenResident={openResidentByName} />
           ) : mode === "admitting" ? (
             <AttendingServicesTable rows={admittingRows} emptyMessage="No admitting attending coverage found for this date." />
           ) : (
@@ -530,12 +541,7 @@ function TodayIssuesPanel({ issues }: { issues: ScheduleIssue[] }) {
   return (
     <Card sx={{ mb: 2, borderRadius: 3 }}>
       <CardContent sx={{ p: 1.5 }}>
-        <Stack
-          direction={{ xs: "column", md: "row" }}
-          spacing={1}
-          justifyContent="space-between"
-          sx={{ mb: 1 }}
-        >
+        <Stack direction={{ xs: "column", md: "row" }} spacing={1} justifyContent="space-between" sx={{ mb: 1 }}>
           <Box>
             <Typography fontWeight={900}>Today&apos;s Issues</Typography>
             <Typography color="text.secondary" fontSize={12.5}>
@@ -555,16 +561,7 @@ function TodayIssuesPanel({ issues }: { issues: ScheduleIssue[] }) {
             const style = issueSeverityStyle(issue.severity);
 
             return (
-              <Box
-                key={issue.id}
-                sx={{
-                  p: 0.75,
-                  borderRadius: 2,
-                  backgroundColor: style.bg,
-                  border: "1px solid",
-                  borderColor: style.border,
-                }}
-              >
+              <Box key={issue.id} sx={{ p: 0.75, borderRadius: 2, backgroundColor: style.bg, border: "1px solid", borderColor: style.border }}>
                 <Typography fontSize={12.5} fontWeight={900} sx={{ color: style.color }}>
                   {issue.title}
                 </Typography>
@@ -586,15 +583,7 @@ function TodayIssuesPanel({ issues }: { issues: ScheduleIssue[] }) {
   );
 }
 
-function IssueCountChip({
-  label,
-  count,
-  severity,
-}: {
-  label: string;
-  count: number;
-  severity: "critical" | "warning" | "info";
-}) {
+function IssueCountChip({ label, count, severity }: { label: string; count: number; severity: "critical" | "warning" | "info" }) {
   const style = issueSeverityStyle(severity);
 
   return (
@@ -614,19 +603,22 @@ function IssueCountChip({
 
 function ResidentCallsTable({
   rows,
+  onOpenResident,
 }: {
   rows: {
     service: string;
     time: string;
     name: string;
+    residentId: string;
     level: string;
     pager: string;
     issues: ScheduleIssue[];
   }[];
+  onOpenResident: (name: string, residentId?: string) => void;
 }) {
   return (
-    <TableShell columns="minmax(170px, 1.1fr) 110px minmax(180px, 1.4fr) 110px 110px">
-      <HeaderRow columns="minmax(170px, 1.1fr) 110px minmax(180px, 1.4fr) 110px 110px">
+    <TableShell columns="minmax(190px, 1.2fr) 120px minmax(220px, 1.7fr) 130px 130px">
+      <HeaderRow columns="minmax(190px, 1.2fr) 120px minmax(220px, 1.7fr) 130px 130px">
         <HeaderCell>Service</HeaderCell>
         <HeaderCell>Time</HeaderCell>
         <HeaderCell>Resident</HeaderCell>
@@ -635,10 +627,10 @@ function ResidentCallsTable({
       </HeaderRow>
 
       {rows.map((row, index) => (
-        <DataRow key={`${row.service}-${index}`} columns="minmax(170px, 1.1fr) 110px minmax(180px, 1.4fr) 110px 110px" index={index}>
+        <DataRow key={`${row.service}-${index}`} columns="minmax(190px, 1.2fr) 120px minmax(220px, 1.7fr) 130px 130px" index={index}>
           <ServiceCell label={row.service} />
           <TimeBadge time={row.time} />
-          <NameCell name={row.name} issues={row.issues} />
+          <NameCell name={row.name} residentId={row.residentId} issues={row.issues} onOpenResident={onOpenResident} />
           <LevelBadge level={row.level} />
           <PagerCell pager={row.pager} />
         </DataRow>
@@ -649,21 +641,23 @@ function ResidentCallsTable({
 
 function AllServicesTable({
   rows,
+  onOpenResident,
 }: {
-  rows: { service: string; name: string; level: string }[];
+  rows: { service: string; name: string; residentId: string; level: string }[];
+  onOpenResident: (name: string, residentId?: string) => void;
 }) {
   return (
-    <TableShell columns="minmax(190px, 1fr) minmax(220px, 1.3fr) 110px">
-      <HeaderRow columns="minmax(190px, 1fr) minmax(220px, 1.3fr) 110px">
+    <TableShell columns="minmax(240px, 1.3fr) minmax(260px, 1.7fr) 130px">
+      <HeaderRow columns="minmax(240px, 1.3fr) minmax(260px, 1.7fr) 130px">
         <HeaderCell>Service</HeaderCell>
         <HeaderCell>Resident</HeaderCell>
         <HeaderCell>Level</HeaderCell>
       </HeaderRow>
 
       {rows.map((row, index) => (
-        <DataRow key={`${row.service}-${row.name}-${index}`} columns="minmax(190px, 1fr) minmax(220px, 1.3fr) 110px" index={index}>
+        <DataRow key={`${row.service}-${row.name}-${index}`} columns="minmax(240px, 1.3fr) minmax(260px, 1.7fr) 130px" index={index}>
           <ServiceCell label={row.service} />
-          <NameCell name={row.name} issues={[]} />
+          <NameCell name={row.name} residentId={row.residentId} issues={[]} onOpenResident={onOpenResident} />
           <LevelBadge level={row.level} />
         </DataRow>
       ))}
@@ -681,8 +675,8 @@ function AttendingServicesTable({
   emptyMessage: string;
 }) {
   return (
-    <TableShell columns="minmax(220px, 1.3fr) minmax(180px, 1.1fr) 130px minmax(160px, 1fr)">
-      <HeaderRow columns="minmax(220px, 1.3fr) minmax(180px, 1.1fr) 130px minmax(160px, 1fr)">
+    <TableShell columns="minmax(260px, 1.5fr) minmax(220px, 1.2fr) 150px minmax(180px, 1fr)">
+      <HeaderRow columns="minmax(260px, 1.5fr) minmax(220px, 1.2fr) 150px minmax(180px, 1fr)">
         <HeaderCell>Specialty / Service</HeaderCell>
         <HeaderCell>Consultant</HeaderCell>
         <HeaderCell>Coverage</HeaderCell>
@@ -690,9 +684,11 @@ function AttendingServicesTable({
       </HeaderRow>
 
       {rows.map((row, index) => (
-        <DataRow key={`${row.specialty}-${index}`} columns="minmax(220px, 1.3fr) minmax(180px, 1.1fr) 130px minmax(160px, 1fr)" index={index}>
+        <DataRow key={`${row.specialty}-${index}`} columns="minmax(260px, 1.5fr) minmax(220px, 1.2fr) 150px minmax(180px, 1fr)" index={index}>
           <ServiceCell label={row.specialty} />
-          <NameCell name={row.consultant} issues={[]} />
+          <Typography fontSize={13.5} fontWeight={700} sx={{ px: 1 }}>
+            {row.consultant || "Unassigned"}
+          </Typography>
           <Chip label={row.coverage} size="small" sx={{ width: "fit-content", fontWeight: 800, ...coverageBadgeColor(row.coverage) }} />
           <Typography fontSize={13} fontWeight={700} sx={{ color: row.phone === "—" ? "text.secondary" : "#2563eb" }}>
             ☎ {row.phone}
@@ -707,8 +703,8 @@ function AttendingServicesTable({
 
 function TableShell({ children, columns }: { children: React.ReactNode; columns: string }) {
   return (
-    <Box sx={{ overflowX: "auto" }}>
-      <Box sx={{ minWidth: 720, "& > .table-row": { display: "grid", gridTemplateColumns: columns, alignItems: "center" } }}>
+    <Box sx={{ overflowX: "auto", width: "100%" }}>
+      <Box sx={{ minWidth: 900, width: "100%", "& > .table-row": { display: "grid", gridTemplateColumns: columns, alignItems: "center" } }}>
         {children}
       </Box>
     </Box>
@@ -759,42 +755,54 @@ function ServiceCell({ label }: { label: string }) {
   );
 }
 
-function NameCell({ name, issues }: { name: string; issues: ScheduleIssue[] }) {
+function NameCell({
+  name,
+  residentId,
+  issues,
+  onOpenResident,
+}: {
+  name: string;
+  residentId?: string;
+  issues: ScheduleIssue[];
+  onOpenResident: (name: string, residentId?: string) => void;
+}) {
   const hasCritical = issues.some((issue) => issue.severity === "critical");
   const hasWarning = issues.some((issue) => issue.severity === "warning");
+  const clickable = Boolean(name && name !== "—" && residentId);
 
   return (
     <Stack direction="row" spacing={0.5} alignItems="center" sx={{ px: 1 }}>
-      <Typography fontSize={13.5} fontWeight={name && name !== "—" ? 650 : 500} fontStyle={name && name !== "—" ? "normal" : "italic"} color={name && name !== "—" ? "text.primary" : "text.secondary"}>
+      <Button
+        variant="text"
+        disabled={!clickable}
+        onClick={() => onOpenResident(name, residentId)}
+        sx={{
+          p: 0,
+          minWidth: 0,
+          textTransform: "none",
+          fontSize: 13.5,
+          fontWeight: name && name !== "—" ? 750 : 500,
+          fontStyle: name && name !== "—" ? "normal" : "italic",
+          color: name && name !== "—" ? "#0f172a" : "text.secondary",
+          justifyContent: "flex-start",
+          "&.Mui-disabled": {
+            color: name && name !== "—" ? "#0f172a" : "text.secondary",
+          },
+          "&:hover": {
+            backgroundColor: "transparent",
+            textDecoration: clickable ? "underline" : "none",
+          },
+        }}
+      >
         {name || "Unassigned"}
-      </Typography>
+      </Button>
 
       {hasCritical && (
-        <Chip
-          label="Issue"
-          size="small"
-          sx={{
-            height: 18,
-            fontSize: 10,
-            fontWeight: 900,
-            color: "#be123c",
-            backgroundColor: "#ffe4e6",
-          }}
-        />
+        <Chip label="Issue" size="small" sx={{ height: 18, fontSize: 10, fontWeight: 900, color: "#be123c", backgroundColor: "#ffe4e6" }} />
       )}
 
       {!hasCritical && hasWarning && (
-        <Chip
-          label="Warning"
-          size="small"
-          sx={{
-            height: 18,
-            fontSize: 10,
-            fontWeight: 900,
-            color: "#b45309",
-            backgroundColor: "#fef3c7",
-          }}
-        />
+        <Chip label="Warning" size="small" sx={{ height: 18, fontSize: 10, fontWeight: 900, color: "#b45309", backgroundColor: "#fef3c7" }} />
       )}
     </Stack>
   );
