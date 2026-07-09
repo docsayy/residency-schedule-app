@@ -11,5 +11,10 @@ export interface UserProfile {
   displayName: string;
   role: AppRole;
   active: boolean;
+  approved: boolean;
+  emailVerified: boolean;
+  residentId?: string;
+  attendingId?: string;
   createdAt: string;
+  lastLogin?: string;
 }

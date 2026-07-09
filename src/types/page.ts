@@ -3,7 +3,6 @@ export type AppPage =
   | "residents"
   | "attendings"
   | "attending-call-schedule"
-  | "services"
   | "schedule"
   | "block-schedule"
   | "call-swaps"

@@ -12,6 +12,16 @@ import type { RotationRequirement } from "../types/rotation";
 
 const rotationsCollection = collection(db, "rotations");
 
+export const NIGHT_FLOAT_ROTATION_IDS = {
+  pgy1TwoNorthCcu: "2n-ccu-pgy1-nf",
+  pgy1FourNorthThreeWest: "4n-3w-pgy1-nf",
+  pgy2TwoNorthCcu: "2n-ccu-pgy2-nf",
+  pgy2FourNorthThreeWest: "4n-3w-pgy2-nf",
+  pgy3: "pgy3-nf",
+} as const;
+
+export const OLD_GENERIC_NIGHT_FLOAT_ROTATION_ID = "night-float";
+
 export async function getRotations(): Promise<RotationRequirement[]> {
   const q = query(rotationsCollection, orderBy("displayOrder", "asc"));
   const snapshot = await getDocs(q);
@@ -34,18 +44,36 @@ export async function seedDefaultRotations() {
     { id: "ambulatory", name: "Ambulatory", category: "Ambulatory", requiredPGY1: 0, requiredPGY2: 0, requiredPGY3: 0, requiredSenior: 0, active: true, displayOrder: 8 },
     { id: "neuro", name: "Neuro", category: "Consult", requiredPGY1: 0, requiredPGY2: 0, requiredPGY3: 0, requiredSenior: 1, active: true, displayOrder: 9 },
     { id: "id", name: "ID", category: "Consult", requiredPGY1: 1, requiredPGY2: 0, requiredPGY3: 0, requiredSenior: 1, active: true, displayOrder: 10 },
-    { id: "night-float", name: "Night Float", category: "Night Float", requiredPGY1: 2, requiredPGY2: 0, requiredPGY3: 1, requiredSenior: 2, active: true, displayOrder: 11 },
-    { id: "3w", name: "3W", category: "Ward", requiredPGY1: 2, requiredPGY2: 0, requiredPGY3: 0, requiredSenior: 1, active: true, displayOrder: 12 },
-    { id: "micu", name: "MICU", category: "ICU", requiredPGY1: 4, requiredPGY2: 0, requiredPGY3: 0, requiredSenior: 2, active: true, displayOrder: 13 },
-    { id: "gi", name: "GI", category: "Consult", requiredPGY1: 0, requiredPGY2: 0, requiredPGY3: 0, requiredSenior: 1, active: true, displayOrder: 14 },
-    { id: "heme-onc", name: "Heme-Onc", category: "Consult", requiredPGY1: 0, requiredPGY2: 0, requiredPGY3: 0, requiredSenior: 1, active: true, displayOrder: 15 },
-    { id: "nephro-rheum-endo", name: "Nephro-Rheum-Endo", category: "Consult", requiredPGY1: 0, requiredPGY2: 0, requiredPGY3: 0, requiredSenior: 1, active: true, displayOrder: 16 },
-    { id: "admission", name: "Admission", category: "Admission", requiredPGY1: 1, requiredPGY2: 0, requiredPGY3: 0, requiredSenior: 1, active: true, displayOrder: 17 },
-    { id: "jeopardy", name: "Jeopardy", category: "Jeopardy", requiredPGY1: 1, requiredPGY2: 1, requiredPGY3: 1, requiredSenior: 0, active: true, displayOrder: 18 },
+
+    { id: NIGHT_FLOAT_ROTATION_IDS.pgy1TwoNorthCcu, name: "2N-CCU PGY1 NF", category: "Night Float", requiredPGY1: 1, requiredPGY2: 0, requiredPGY3: 0, requiredSenior: 0, active: true, displayOrder: 11 },
+    { id: NIGHT_FLOAT_ROTATION_IDS.pgy1FourNorthThreeWest, name: "4N-3W PGY1 NF", category: "Night Float", requiredPGY1: 1, requiredPGY2: 0, requiredPGY3: 0, requiredSenior: 0, active: true, displayOrder: 12 },
+    { id: NIGHT_FLOAT_ROTATION_IDS.pgy2TwoNorthCcu, name: "2N-CCU PGY2 NF", category: "Night Float", requiredPGY1: 0, requiredPGY2: 1, requiredPGY3: 0, requiredSenior: 1, active: true, displayOrder: 13 },
+    { id: NIGHT_FLOAT_ROTATION_IDS.pgy2FourNorthThreeWest, name: "4N-3W PGY2 NF", category: "Night Float", requiredPGY1: 0, requiredPGY2: 1, requiredPGY3: 0, requiredSenior: 1, active: true, displayOrder: 14 },
+    { id: NIGHT_FLOAT_ROTATION_IDS.pgy3, name: "PGY3 NF", category: "Night Float", requiredPGY1: 0, requiredPGY2: 0, requiredPGY3: 1, requiredSenior: 1, active: true, displayOrder: 15 },
+
+    { id: "3w", name: "3W", category: "Ward", requiredPGY1: 2, requiredPGY2: 0, requiredPGY3: 0, requiredSenior: 1, active: true, displayOrder: 16 },
+    { id: "micu", name: "MICU", category: "ICU", requiredPGY1: 4, requiredPGY2: 0, requiredPGY3: 0, requiredSenior: 2, active: true, displayOrder: 17 },
+    { id: "gi", name: "GI", category: "Consult", requiredPGY1: 0, requiredPGY2: 0, requiredPGY3: 0, requiredSenior: 1, active: true, displayOrder: 18 },
+    { id: "heme-onc", name: "Heme-Onc", category: "Consult", requiredPGY1: 0, requiredPGY2: 0, requiredPGY3: 0, requiredSenior: 1, active: true, displayOrder: 19 },
+    { id: "nephro-rheum-endo", name: "Nephro-Rheum-Endo", category: "Consult", requiredPGY1: 0, requiredPGY2: 0, requiredPGY3: 0, requiredSenior: 1, active: true, displayOrder: 20 },
+    { id: "admission", name: "Admission", category: "Admission", requiredPGY1: 1, requiredPGY2: 0, requiredPGY3: 0, requiredSenior: 1, active: true, displayOrder: 21 },
+    { id: "jeopardy", name: "Jeopardy", category: "Jeopardy", requiredPGY1: 1, requiredPGY2: 1, requiredPGY3: 1, requiredSenior: 0, active: true, displayOrder: 22 },
+
+    {
+      id: OLD_GENERIC_NIGHT_FLOAT_ROTATION_ID,
+      name: "Night Float",
+      category: "Night Float",
+      requiredPGY1: 0,
+      requiredPGY2: 0,
+      requiredPGY3: 0,
+      requiredSenior: 0,
+      active: false,
+      displayOrder: 999,
+    },
   ];
 
   for (const rotation of rotations) {
     const { id, ...data } = rotation;
-    await setDoc(doc(db, "rotations", id), data);
+    await setDoc(doc(db, "rotations", id), data, { merge: true });
   }
 }

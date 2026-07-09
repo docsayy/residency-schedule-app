@@ -9,7 +9,6 @@ import WhosOnPage from "./pages/WhosOnPage";
 import ResidentsPage from "./pages/ResidentsPage";
 import AttendingsPage from "./pages/AttendingsPage";
 import AttendingCallSchedulePage from "./pages/AttendingCallSchedulePage";
-import ServicesPage from "./pages/ServicesPage";
 import MonthlyScheduleMatrixPage from "./pages/MonthlyScheduleMatrixPage";
 import BlockSchedulePage from "./pages/BlockSchedulePage";
 
@@ -30,7 +29,7 @@ function PlaceholderPage({ title }: { title: string }) {
 }
 
 function AppContent() {
-  const { user, loading } = useAuth();
+  const { user, profile, loading } = useAuth();
   const [currentPage, setCurrentPage] = useState<AppPage>("whos-on");
 
   if (loading) {
@@ -48,7 +47,7 @@ function AppContent() {
     );
   }
 
-  if (!user) {
+  if (!user || !profile) {
     return <LoginPage />;
   }
 
@@ -57,7 +56,6 @@ function AppContent() {
     residents: <ResidentsPage />,
     attendings: <AttendingsPage />,
     "attending-call-schedule": <AttendingCallSchedulePage />,
-    services: <ServicesPage />,
     schedule: <MonthlyScheduleMatrixPage />,
     "block-schedule": <BlockSchedulePage />,
     "call-swaps": <PlaceholderPage title="Call Swaps" />,

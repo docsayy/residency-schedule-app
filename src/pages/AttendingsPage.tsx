@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import {
   Alert,
+  Autocomplete,
   Box,
   Button,
   Card,
@@ -32,6 +33,24 @@ import type { Attending } from "../types/attending";
 import { canManageResidents } from "../utils/permissions";
 
 type AttendingTab = "All" | "Admitting" | "Specialty" | "Inactive";
+
+const specialtyOptions = [
+  "Medicine",
+  "Observation",
+  "Faculty",
+  "Cardiology",
+  "Gastroenterology",
+  "Neurology",
+  "Pulmonary",
+  "MICU",
+  "Infectious Disease",
+  "Nephrology",
+  "Rheumatology",
+  "Hematology",
+  "Oncology",
+  "Endocrinology",
+  "Other",
+];
 
 const emptyAttending: Attending = {
   id: "",
@@ -414,6 +433,7 @@ function AttendingFormDialog({
     onSave({
       ...form,
       displayName,
+      specialty: form.specialty.trim(),
     });
   }
 
@@ -444,12 +464,25 @@ function AttendingFormDialog({
             fullWidth
           />
 
-          <TextField
-            label="Specialty / Group"
-            value={form.specialty}
-            onChange={(e) => setForm({ ...form, specialty: e.target.value })}
-            placeholder="Medicine, Observation, Cardiology, GI, Pulmonary..."
-            fullWidth
+          <Autocomplete
+            freeSolo
+            options={specialtyOptions}
+            value={form.specialty || ""}
+            onChange={(_, value) =>
+              setForm({ ...form, specialty: value || "" })
+            }
+            onInputChange={(_, value) =>
+              setForm({ ...form, specialty: value })
+            }
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label="Specialty / Group"
+                placeholder="Pick or type specialty"
+                helperText="This controls filtered attending dropdowns in the attending schedule."
+                fullWidth
+              />
+            )}
           />
 
           <TextField
@@ -479,7 +512,7 @@ function AttendingFormDialog({
             onChange={(e) => setForm({ ...form, notes: e.target.value })}
             multiline
             minRows={3}
-            placeholder="Use notes for extra classification if needed."
+            placeholder="Optional notes. You can also add keywords here."
             fullWidth
           />
         </Stack>

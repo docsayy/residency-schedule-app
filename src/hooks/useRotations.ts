@@ -15,7 +15,7 @@ export function useRotations() {
       setLoading(true);
       setError("");
       const data = await getRotations();
-      setRotations(data.filter((rotation) => rotation.active));
+      setRotations(data);
     } catch (err) {
       console.error(err);
       setError("Unable to load rotations.");

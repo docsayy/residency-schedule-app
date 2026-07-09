@@ -20,7 +20,6 @@ import MenuIcon from "@mui/icons-material/Menu";
 import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
 import PeopleIcon from "@mui/icons-material/People";
 import BadgeIcon from "@mui/icons-material/Badge";
-import MedicalServicesIcon from "@mui/icons-material/MedicalServices";
 import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
 import ViewWeekIcon from "@mui/icons-material/ViewWeek";
 import SwapHorizIcon from "@mui/icons-material/SwapHoriz";
@@ -43,7 +42,6 @@ const navItems: { label: string; page: AppPage; icon: React.ReactNode }[] = [
     page: "attending-call-schedule",
     icon: <LocalHospitalIcon />,
   },
-  { label: "Services", page: "services", icon: <MedicalServicesIcon /> },
   { label: "Daily Call Schedule", page: "schedule", icon: <CalendarMonthIcon /> },
   { label: "Block Schedule", page: "block-schedule", icon: <ViewWeekIcon /> },
   { label: "Call Swaps", page: "call-swaps", icon: <SwapHorizIcon /> },
@@ -136,7 +134,7 @@ export default function DashboardLayout({
             </IconButton>
 
             <Typography variant="h6" noWrap fontWeight={800}>
-              Residency Scheduler
+              WhosOn
             </Typography>
           </Stack>
 

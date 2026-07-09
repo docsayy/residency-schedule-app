@@ -23,24 +23,31 @@ import { useMonthlySchedule } from "../hooks/useMonthlySchedule";
 import { useResidents } from "../hooks/useResidents";
 import type { AttendingScheduleAssignment } from "../types/attendingSchedule";
 import type { MonthlyScheduleCell } from "../types/monthSchedule";
+import type { ScheduleService } from "../types/schedule";
+import {
+  EXACT_NF_SERVICE_IDS,
+  getAutoNightFloatCell,
+  isNightFloatService,
+} from "../utils/nightFloatSchedule";
 
 type WhosOnMode = "call" | "all" | "admitting" | "consulting";
 
 const residentCallRows = [
   { ids: ["tele-pgy1", "tele-intern"], names: ["Tele PGY1", "Tele Intern"], name: "Tele PGY1", time: "7a-7p", level: "PGY-1", order: 1 },
-  { ids: ["2n-ccu-pgy1", "2n-ccu-intern"], names: ["2N CCU PGY1", "2N-CCU Intern", "2N CCU Intern"], name: "2N CCU PGY1", time: "7a-7p", level: "PGY-1", order: 2 },
-  { ids: ["2n-ccu-pgy2"], names: ["2N CCU PGY2", "2N-CCU PGY2"], name: "2N CCU PGY2", time: "7a-7p", level: "PGY-2", order: 3 },
+  { ids: ["2n-ccu-pgy1", "2n-ccu-intern"], names: ["2N-CCU PGY1", "2N CCU PGY1", "2N-CCU Intern", "2N CCU Intern"], name: "2N-CCU PGY1", time: "7a-7p", level: "PGY-1", order: 2 },
+  { ids: ["2n-ccu-pgy2"], names: ["2N-CCU PGY2", "2N CCU PGY2"], name: "2N-CCU PGY2", time: "7a-7p", level: "PGY-2", order: 3 },
   { ids: ["3w-pgy1", "3w-intern"], names: ["3W PGY1", "3W Intern"], name: "3W PGY1", time: "7a-7p", level: "PGY-1", order: 4 },
   { ids: ["4n-pgy1", "4n-intern"], names: ["4N PGY1", "4N Intern"], name: "4N PGY1", time: "7a-7p", level: "PGY-1", order: 5 },
   { ids: ["4n-3w-pgy2"], names: ["4N-3W PGY2"], name: "4N-3W PGY2", time: "7a-7p", level: "PGY-2", order: 6 },
   { ids: ["micu-pgy1", "micu-intern"], names: ["MICU PGY1", "MICU Intern"], name: "MICU PGY1", time: "7a-7a", level: "PGY-1", order: 7 },
   { ids: ["micu-senior"], names: ["MICU Senior"], name: "MICU Senior", time: "8a-8a", level: "PGY-2, PGY-3", order: 8 },
   { ids: ["chief-on-call"], names: ["Chief On Call"], name: "Chief On Call", time: "7a-7p", level: "PGY-3", order: 9 },
-  { ids: ["4n-3w-pgy1-nf", "weekend-nf-intern-1"], names: ["4N-3W PGY1 NF", "Weekend NF Intern 1"], name: "4N-3W PGY1 NF", time: "7p-7a", level: "PGY-1", order: 10 },
-  { ids: ["4n-3w-pgy2-nf", "weekend-nf-senior-1"], names: ["4N-3W PGY2 NF", "Weekend NF Senior 1"], name: "4N-3W PGY2 NF", time: "7p-7a", level: "PGY-2", order: 11 },
-  { ids: ["2n-ccu-pgy1-nf", "weekend-nf-intern-2"], names: ["2N CCU PGY1 NF", "Weekend NF Intern 2"], name: "2N CCU PGY1 NF", time: "7p-7a", level: "PGY-1", order: 12 },
-  { ids: ["2n-ccu-pgy2-nf", "weekend-nf-senior-2"], names: ["2N CCU PGY2 NF", "Weekend NF Senior 2"], name: "2N CCU PGY2 NF", time: "7p-7a", level: "PGY-2", order: 13 },
-  { ids: ["pgy3-nf", "weekend-pgy3-nf"], names: ["PGY3 NF", "Weekend PGY3 NF"], name: "PGY3 NF", time: "7p-7a", level: "PGY-3", order: 14 },
+
+  { ids: [EXACT_NF_SERVICE_IDS.pgy1FourNorthThreeWest, "weekend-nf-intern-1"], names: ["4N-3W PGY1 NF", "Weekend NF Intern 1"], name: "4N-3W PGY1 NF", time: "7p-7a", level: "PGY-1", order: 10 },
+  { ids: [EXACT_NF_SERVICE_IDS.pgy2FourNorthThreeWest, "weekend-nf-senior-1"], names: ["4N-3W PGY2 NF", "Weekend NF Senior 1"], name: "4N-3W PGY2 NF", time: "7p-7a", level: "PGY-2", order: 11 },
+  { ids: [EXACT_NF_SERVICE_IDS.pgy1TwoNorthCcu, "weekend-nf-intern-2"], names: ["2N-CCU PGY1 NF", "2N CCU PGY1 NF", "Weekend NF Intern 2"], name: "2N-CCU PGY1 NF", time: "7p-7a", level: "PGY-1", order: 12 },
+  { ids: [EXACT_NF_SERVICE_IDS.pgy2TwoNorthCcu, "weekend-nf-senior-2"], names: ["2N-CCU PGY2 NF", "2N CCU PGY2 NF", "Weekend NF Senior 2"], name: "2N-CCU PGY2 NF", time: "7p-7a", level: "PGY-2", order: 13 },
+  { ids: [EXACT_NF_SERVICE_IDS.pgy3, "weekend-pgy3-nf"], names: ["PGY3 NF", "Weekend PGY3 NF"], name: "PGY3 NF", time: "7p-7a", level: "PGY-3", order: 14 },
 ];
 
 function toDateInputValue(date: Date) {
@@ -94,6 +101,30 @@ function findMonthlyCell(
     if (cell.date !== date) return false;
     return rowNames.includes(normalizeText(cell.serviceName || ""));
   });
+}
+
+function makeScheduleServiceFromRow(
+  row: (typeof residentCallRows)[number]
+): ScheduleService {
+  const isNight = row.time.includes("7p");
+  const firstId = row.ids[0];
+
+  return {
+    id: firstId,
+    name: row.name,
+    shortName: row.name,
+    category: isNight ? "Night" : "Day",
+    coverageGroup: "Resident",
+    attendingScheduleType: "None",
+    requiredTraining: [],
+    defaultStartTime: isNight ? "19:00" : "07:00",
+    defaultEndTime: row.time.includes("8a") ? "08:00" : isNight ? "07:00" : "19:00",
+    displayOrderCall: row.order,
+    displayOrderAll: row.order,
+    visibleOnCall: true,
+    visibleOnAllServices: true,
+    active: true,
+  };
 }
 
 function getLevelStyle(level: string) {
@@ -176,7 +207,21 @@ export default function WhosOnPage() {
     return residentCallRows
       .sort((a, b) => a.order - b.order)
       .map((row) => {
-        const cell = findMonthlyCell(selectedDateKey, row, monthlyAssignments);
+        const manualCell = findMonthlyCell(selectedDateKey, row, monthlyAssignments);
+        const service = makeScheduleServiceFromRow(row);
+
+        const autoCell =
+          !manualCell && isNightFloatService(service.id)
+            ? getAutoNightFloatCell({
+                date: selectedDateKey,
+                service,
+                blocks,
+                blockAssignments,
+                residents,
+              })
+            : undefined;
+
+        const cell = manualCell || autoCell;
         const resident = cell?.residentId ? residentsById[cell.residentId] : undefined;
 
         return {
@@ -187,7 +232,14 @@ export default function WhosOnPage() {
           pager: cell?.pager || resident?.pager || "",
         };
       });
-  }, [monthlyAssignments, residentsById, selectedDateKey]);
+  }, [
+    blockAssignments,
+    blocks,
+    monthlyAssignments,
+    residents,
+    residentsById,
+    selectedDateKey,
+  ]);
 
   const assignedCallCount = callRows.filter((row) => row.name).length;
 
