@@ -79,10 +79,7 @@ function makeService(
 }
 
 function toDateInputValue(date: Date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
 
 function getMonthId(date: Date) {
@@ -120,7 +117,17 @@ function isSameMonth(date: string, monthId: string) {
   return date.slice(0, 7) === monthId;
 }
 
-function getCurrentBlockRotation(date: string, residentId: string, blockAssignments: any[], blocks: any[]) {
+function shortDate(date: string) {
+  const parsed = parseLocalDate(date);
+  return `${parsed.getMonth() + 1}/${parsed.getDate()}`;
+}
+
+function getCurrentBlockRotation(
+  date: string,
+  residentId: string,
+  blockAssignments: any[],
+  blocks: any[]
+) {
   const block = blocks.find((item) => date >= item.startDate && date <= item.endDate);
   if (!block) return "";
 
@@ -254,6 +261,17 @@ export default function ResidentScheduleProfilePage({
       });
   }, [blockAssignments, blocks, resident]);
 
+  const blockSummary = useMemo(() => {
+    const counts: Record<string, number> = {};
+
+    for (const row of blockRows) {
+      if (row.rotation === "Unassigned") continue;
+      counts[row.rotation] = (counts[row.rotation] || 0) + 1;
+    }
+
+    return Object.entries(counts).sort((a, b) => a[0].localeCompare(b[0]));
+  }, [blockRows]);
+
   const loading =
     residentsLoading || blocksLoading || blockAssignmentsLoading || scheduleLoading;
 
@@ -314,27 +332,31 @@ export default function ResidentScheduleProfilePage({
   }
 
   return (
-    <Box>
-      <Box className="no-print" sx={{ mb: 2 }}>
+    <Box sx={{ width: "100%", maxWidth: "none", minWidth: 0 }}>
+      <Box className="no-print" sx={{ mb: { xs: 1, md: 2 } }}>
         <Button startIcon={<ArrowBackIcon />} onClick={onBack} sx={{ mb: 1 }}>
-          Back to Residents
+          Back
         </Button>
 
-        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+        {error && <Alert severity="error" sx={{ mb: 1 }}>{error}</Alert>}
       </Box>
 
-      <Card sx={{ borderRadius: 3, mb: 2 }} className="print-header">
-        <CardContent sx={{ p: 2 }}>
+      <Card sx={{ borderRadius: { xs: 2, md: 3 }, mb: { xs: 1, md: 2 } }} className="print-header">
+        <CardContent sx={{ p: { xs: 1.25, md: 2 } }}>
           <Stack
             direction={{ xs: "column", md: "row" }}
             justifyContent="space-between"
-            spacing={1.5}
+            spacing={1}
           >
             <Box>
-              <Typography variant="h4" fontWeight={900}>
+              <Typography
+                variant="h4"
+                fontWeight={900}
+                sx={{ fontSize: { xs: 24, md: 34 }, lineHeight: 1.1 }}
+              >
                 {resident.displayName}
               </Typography>
-              <Typography color="text.secondary" fontWeight={700}>
+              <Typography color="text.secondary" fontWeight={700} fontSize={{ xs: 13, md: 14 }}>
                 {resident.pgy} Resident
               </Typography>
               <Typography color="text.secondary" fontSize={13}>
@@ -344,36 +366,48 @@ export default function ResidentScheduleProfilePage({
               </Typography>
             </Box>
 
-            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap className="no-print">
+            <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap className="no-print">
               <Button
                 variant="outlined"
                 startIcon={<PrintIcon />}
                 onClick={handlePrint}
+                size="small"
                 sx={{ textTransform: "none", fontWeight: 800 }}
               >
-                Print / PDF
+                Print/PDF
               </Button>
 
               <Button
                 variant="outlined"
                 startIcon={<DownloadIcon />}
                 onClick={tab === "calendar" ? exportCalendarCsv : exportBlocksCsv}
+                size="small"
                 sx={{ textTransform: "none", fontWeight: 800 }}
               >
-                Export CSV
+                CSV
               </Button>
             </Stack>
           </Stack>
         </CardContent>
       </Card>
 
-      <Card sx={{ mb: 2, borderRadius: 2 }} className="no-print">
-        <CardContent sx={{ p: 1 }}>
+      <Card sx={{ mb: { xs: 1, md: 2 }, borderRadius: 2 }} className="no-print">
+        <CardContent sx={{ p: { xs: 0.5, md: 1 } }}>
           <Tabs
             value={tab}
             onChange={(_, value: ProfileTab) => setTab(value)}
             variant="scrollable"
             scrollButtons="auto"
+            sx={{
+              minHeight: 38,
+              "& .MuiTab-root": {
+                minHeight: 38,
+                py: 0.75,
+                px: { xs: 1.25, md: 2 },
+                fontSize: { xs: 12, md: 13 },
+                fontWeight: 850,
+              },
+            }}
           >
             <Tab label="Monthly Calendar" value="calendar" />
             <Tab label="Academic Blocks" value="blocks" />
@@ -382,47 +416,63 @@ export default function ResidentScheduleProfilePage({
       </Card>
 
       {tab === "calendar" ? (
-        <Card sx={{ borderRadius: 3 }}>
-          <CardContent sx={{ p: 1.25 }}>
+        <Card sx={{ borderRadius: { xs: 2, md: 3 } }}>
+          <CardContent sx={{ p: { xs: 0.75, md: 1.25 } }}>
             <Stack
-              direction={{ xs: "column", md: "row" }}
-              justifyContent="space-between"
-              spacing={1}
+              direction="row"
+              alignItems="center"
+              spacing={0.75}
               sx={{ mb: 1 }}
               className="no-print"
             >
-              <Stack direction="row" spacing={1}>
-                <Button variant="outlined" onClick={() => setMonthId(addMonths(monthId, -1))}>
-                  <ChevronLeftIcon />
-                </Button>
+              <Button
+                variant="outlined"
+                onClick={() => setMonthId(addMonths(monthId, -1))}
+                sx={{ minWidth: 42, px: { xs: 0.75, md: 1.5 } }}
+              >
+                <ChevronLeftIcon />
+              </Button>
 
-                <Box
-                  sx={{
-                    minWidth: 190,
-                    height: 40,
-                    display: "grid",
-                    placeItems: "center",
-                    border: "1px solid",
-                    borderColor: "divider",
-                    borderRadius: 2,
-                    backgroundColor: "#f8fafc",
-                    fontWeight: 900,
-                  }}
-                >
-                  {getMonthName(monthId)}
-                </Box>
+              <Box
+                sx={{
+                  height: 38,
+                  px: { xs: 1, md: 2 },
+                  flex: 1,
+                  minWidth: 0,
+                  display: "grid",
+                  placeItems: "center",
+                  border: "1px solid",
+                  borderColor: "divider",
+                  borderRadius: 2,
+                  backgroundColor: "#f8fafc",
+                  fontWeight: 900,
+                  fontSize: { xs: 13, md: 15 },
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {getMonthName(monthId)}
+              </Box>
 
-                <Button variant="outlined" onClick={() => setMonthId(addMonths(monthId, 1))}>
-                  <ChevronRightIcon />
-                </Button>
-              </Stack>
+              <Button
+                variant="outlined"
+                onClick={() => setMonthId(addMonths(monthId, 1))}
+                sx={{ minWidth: 42, px: { xs: 0.75, md: 1.5 } }}
+              >
+                <ChevronRightIcon />
+              </Button>
             </Stack>
 
-            <Box className="print-area">
+            <Box className="print-area" sx={{ overflowX: "auto", width: "100%" }}>
               <Box
                 sx={{
                   display: "grid",
-                  gridTemplateColumns: "repeat(7, minmax(120px, 1fr))",
+                  gridTemplateColumns: {
+                    xs: "repeat(7, minmax(62px, 1fr))",
+                    sm: "repeat(7, minmax(88px, 1fr))",
+                    md: "repeat(7, minmax(110px, 1fr))",
+                  },
+                  minWidth: { xs: 434, sm: 616, md: 0 },
+                  width: { xs: "max-content", md: "100%" },
                   border: "1px solid",
                   borderColor: "divider",
                   borderRadius: 2,
@@ -433,14 +483,14 @@ export default function ResidentScheduleProfilePage({
                   <Box
                     key={day}
                     sx={{
-                      p: 0.75,
+                      p: { xs: 0.45, md: 0.75 },
                       backgroundColor: "#e2e8f0",
                       borderRight: "1px solid",
                       borderBottom: "1px solid",
                       borderColor: "divider",
                       textAlign: "center",
                       fontWeight: 900,
-                      fontSize: 12,
+                      fontSize: { xs: 10.5, md: 12 },
                     }}
                   >
                     {day}
@@ -463,60 +513,74 @@ export default function ResidentScheduleProfilePage({
                     <Box
                       key={date}
                       sx={{
-                        minHeight: 112,
-                        p: 0.7,
+                        minHeight: { xs: 62, sm: 74, md: 86 },
+                        p: { xs: 0.4, md: 0.55 },
                         borderRight: "1px solid",
                         borderBottom: "1px solid",
                         borderColor: "divider",
                         backgroundColor: dimmed ? "#f8fafc" : "white",
-                        opacity: dimmed ? 0.55 : 1,
+                        opacity: dimmed ? 0.5 : 1,
+                        overflow: "hidden",
                       }}
                     >
-                      <Typography fontWeight={900} fontSize={12} sx={{ mb: 0.5 }}>
+                      <Typography fontWeight={900} fontSize={{ xs: 10.5, md: 12 }} sx={{ mb: 0.25 }}>
                         {parseLocalDate(date).getDate()}
                       </Typography>
 
                       {rotation && (
-                        <Chip
-                          label={rotation}
-                          size="small"
+                        <Box
                           sx={{
-                            height: 20,
-                            maxWidth: "100%",
-                            fontSize: 10.5,
-                            fontWeight: 850,
+                            px: 0.4,
+                            py: 0.15,
+                            mb: 0.25,
+                            borderRadius: 0.75,
                             color: rotationStyle?.color,
                             backgroundColor: rotationStyle?.bg,
                             border: "1px solid",
                             borderColor: rotationStyle?.border,
-                            mb: 0.4,
+                            fontSize: { xs: 9.5, md: 10.5 },
+                            fontWeight: 850,
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
                           }}
-                        />
+                        >
+                          {rotation}
+                        </Box>
                       )}
 
-                      <Stack spacing={0.35}>
-                        {calls.map((call) => {
+                      <Stack spacing={0.25}>
+                        {calls.slice(0, 2).map((call) => {
                           const style = rotationColor(call.serviceName);
 
                           return (
                             <Box
                               key={`${call.date}-${call.serviceId}`}
                               sx={{
-                                px: 0.5,
-                                py: 0.25,
-                                borderRadius: 1,
+                                px: 0.4,
+                                py: 0.1,
+                                borderRadius: 0.75,
                                 backgroundColor: style.bg,
                                 border: "1px solid",
                                 borderColor: style.border,
                                 color: style.color,
-                                fontSize: 10.5,
+                                fontSize: { xs: 9, md: 10 },
                                 fontWeight: 900,
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                whiteSpace: "nowrap",
                               }}
                             >
                               {call.serviceName}
                             </Box>
                           );
                         })}
+
+                        {calls.length > 2 && (
+                          <Typography fontSize={9.5} color="text.secondary">
+                            +{calls.length - 2} more
+                          </Typography>
+                        )}
                       </Stack>
                     </Box>
                   );
@@ -526,62 +590,98 @@ export default function ResidentScheduleProfilePage({
           </CardContent>
         </Card>
       ) : (
-        <Card sx={{ borderRadius: 3 }}>
-          <CardContent sx={{ p: 1.25 }}>
-            <Box className="print-area" sx={{ overflowX: "auto" }}>
-              <Box sx={{ minWidth: 820 }}>
-                <Box
-                  sx={{
-                    display: "grid",
-                    gridTemplateColumns: "120px 130px 130px minmax(200px, 1fr) minmax(160px, 1fr)",
-                    backgroundColor: "#e2e8f0",
-                    borderRadius: "8px 8px 0 0",
-                    border: "1px solid",
-                    borderColor: "divider",
-                  }}
-                >
-                  {["Block", "Start", "End", "Rotation", "Notes"].map((header) => (
-                    <Typography
-                      key={header}
-                      fontSize={12}
-                      fontWeight={900}
-                      sx={{ p: 0.9, borderRight: "1px solid", borderColor: "divider" }}
-                    >
-                      {header}
-                    </Typography>
-                  ))}
-                </Box>
-
-                {blockRows.map((row, index) => {
+        <Card sx={{ borderRadius: { xs: 2, md: 3 } }}>
+          <CardContent sx={{ p: { xs: 0.75, md: 1.25 } }}>
+            <Box className="print-area">
+              <Box
+                sx={{
+                  display: "grid",
+                  gridTemplateColumns: {
+                    xs: "repeat(2, minmax(0, 1fr))",
+                    sm: "repeat(3, minmax(0, 1fr))",
+                    md: "repeat(4, minmax(0, 1fr))",
+                    lg: "repeat(6, minmax(0, 1fr))",
+                  },
+                  gap: { xs: 0.75, md: 1 },
+                }}
+              >
+                {blockRows.map((row) => {
                   const style = rotationColor(row.rotation);
 
                   return (
                     <Box
                       key={`${row.block}-${row.startDate}`}
                       sx={{
-                        display: "grid",
-                        gridTemplateColumns: "120px 130px 130px minmax(200px, 1fr) minmax(160px, 1fr)",
-                        borderLeft: "1px solid",
-                        borderRight: "1px solid",
-                        borderBottom: "1px solid",
-                        borderColor: "divider",
-                        backgroundColor: index % 2 === 0 ? "white" : "#f8fafc",
+                        minHeight: { xs: 86, md: 96 },
+                        p: { xs: 0.75, md: 1 },
+                        borderRadius: 2,
+                        backgroundColor: style.bg,
+                        border: "1px solid",
+                        borderColor: style.border,
+                        overflow: "hidden",
                       }}
                     >
-                      <Typography fontSize={12.5} fontWeight={800} sx={{ p: 0.9 }}>
-                        {row.block}
+                      <Typography fontSize={{ xs: 12, md: 13 }} fontWeight={950} sx={{ color: style.color }}>
+                        {row.block.replace("Block ", "B")}
                       </Typography>
-                      <Typography fontSize={12.5} sx={{ p: 0.9 }}>
-                        {row.startDate}
+
+                      <Typography fontSize={{ xs: 10.5, md: 11.5 }} color="text.secondary" sx={{ mb: 0.4 }}>
+                        {shortDate(row.startDate)} to {shortDate(row.endDate)}
                       </Typography>
-                      <Typography fontSize={12.5} sx={{ p: 0.9 }}>
-                        {row.endDate}
+
+                      <Typography
+                        fontSize={{ xs: 12, md: 13 }}
+                        fontWeight={900}
+                        sx={{
+                          color: style.color,
+                          lineHeight: 1.15,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          display: "-webkit-box",
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: "vertical",
+                        }}
+                      >
+                        {row.rotation}
                       </Typography>
-                      <Box sx={{ p: 0.75 }}>
+
+                      {row.notes && (
+                        <Typography
+                          fontSize={10.5}
+                          color="text.secondary"
+                          sx={{
+                            mt: 0.35,
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {row.notes}
+                        </Typography>
+                      )}
+                    </Box>
+                  );
+                })}
+              </Box>
+
+              <Box sx={{ mt: 2 }}>
+                <Typography fontWeight={900} fontSize={{ xs: 14, md: 16 }} sx={{ mb: 1 }}>
+                  Block Summary
+                </Typography>
+
+                <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
+                  {blockSummary.length > 0 ? (
+                    blockSummary.map(([rotation, count]) => {
+                      const style = rotationColor(rotation);
+
+                      return (
                         <Chip
-                          label={row.rotation}
+                          key={rotation}
+                          label={`${rotation}: ${count}`}
                           size="small"
                           sx={{
+                            height: 23,
+                            fontSize: 11,
                             fontWeight: 850,
                             color: style.color,
                             backgroundColor: style.bg,
@@ -589,13 +689,14 @@ export default function ResidentScheduleProfilePage({
                             borderColor: style.border,
                           }}
                         />
-                      </Box>
-                      <Typography fontSize={12.5} color="text.secondary" sx={{ p: 0.9 }}>
-                        {row.notes || "—"}
-                      </Typography>
-                    </Box>
-                  );
-                })}
+                      );
+                    })
+                  ) : (
+                    <Typography color="text.secondary" fontSize={13}>
+                      No assigned blocks yet.
+                    </Typography>
+                  )}
+                </Stack>
               </Box>
             </Box>
           </CardContent>

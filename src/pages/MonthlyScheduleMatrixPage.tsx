@@ -325,32 +325,44 @@ export default function MonthlyScheduleMatrixPage({
   }
 
   return (
-    <Box sx={{ width: "100%", maxWidth: "none" }}>
+    <Box sx={{ width: "100%", maxWidth: "none", minWidth: 0 }}>
       <Stack
-        direction={{ xs: "column", lg: "row" }}
-        spacing={1.5}
+        direction={{ xs: "column", md: "row" }}
+        spacing={{ xs: 1, md: 1.5 }}
         justifyContent="space-between"
-        alignItems={{ xs: "stretch", lg: "center" }}
-        sx={{ mb: 2 }}
+        alignItems={{ xs: "stretch", md: "center" }}
+        sx={{ mb: { xs: 1, md: 2 } }}
       >
         <Box>
-          <Typography variant="h4" fontWeight={850} sx={{ lineHeight: 1 }}>
+          <Typography
+            variant="h4"
+            fontWeight={850}
+            sx={{ lineHeight: 1, fontSize: { xs: 25, md: 34 } }}
+          >
             Daily Call Schedule
           </Typography>
-          <Typography color="text.secondary" fontSize={14}>
+          <Typography
+            color="text.secondary"
+            fontSize={14}
+            sx={{ display: { xs: "none", md: "block" } }}
+          >
             Two-week resident call schedule. Drafts are hidden from regular residents until published.
           </Typography>
         </Box>
 
-        <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
-          <Button variant="outlined" onClick={goPreviousWeek}>
+        <Stack direction="row" spacing={0.75} alignItems="center" sx={{ width: { xs: "100%", md: "auto" } }}>
+          <Button
+            variant="outlined"
+            onClick={goPreviousWeek}
+            sx={{ minWidth: { xs: 42, md: 48 }, px: { xs: 0.75, md: 1.5 } }}
+          >
             <ChevronLeftIcon />
           </Button>
 
           <Box
             sx={{
-              height: 40,
-              px: 2,
+              height: 38,
+              px: { xs: 1, md: 2 },
               borderRadius: 2,
               fontWeight: 850,
               display: "grid",
@@ -358,13 +370,20 @@ export default function MonthlyScheduleMatrixPage({
               backgroundColor: "#f8fafc",
               border: "1px solid",
               borderColor: "divider",
-              fontSize: 14,
+              fontSize: { xs: 12, md: 14 },
+              flex: { xs: 1, md: "unset" },
+              minWidth: 0,
+              whiteSpace: "nowrap",
             }}
           >
             {formatWeekRange(days)}
           </Box>
 
-          <Button variant="outlined" onClick={goNextWeek}>
+          <Button
+            variant="outlined"
+            onClick={goNextWeek}
+            sx={{ minWidth: { xs: 42, md: 48 }, px: { xs: 0.75, md: 1.5 } }}
+          >
             <ChevronRightIcon />
           </Button>
 
@@ -372,9 +391,19 @@ export default function MonthlyScheduleMatrixPage({
             variant="outlined"
             startIcon={<TodayIcon />}
             onClick={goToday}
-            sx={{ textTransform: "none", fontWeight: 800 }}
+            sx={{
+              textTransform: "none",
+              fontWeight: 800,
+              minWidth: { xs: 42, md: 92 },
+              px: { xs: 1, md: 1.5 },
+              "& .MuiButton-startIcon": {
+                mr: { xs: 0, md: 0.75 },
+              },
+            }}
           >
-            Current
+            <Box component="span" sx={{ display: { xs: "none", md: "inline" } }}>
+              Current
+            </Box>
           </Button>
 
           {allowBuild && (
@@ -382,38 +411,67 @@ export default function MonthlyScheduleMatrixPage({
               variant={isPublished ? "outlined" : "contained"}
               color={isPublished ? "warning" : "primary"}
               onClick={() => handlePublish(isPublished ? "draft" : "published")}
-              sx={{ textTransform: "none", fontWeight: 850 }}
+              sx={{
+                display: { xs: "none", sm: "inline-flex" },
+                textTransform: "none",
+                fontWeight: 850,
+              }}
             >
-              {isPublished ? "Unpublish Month" : "Publish Month"}
+              {isPublished ? "Unpublish" : "Publish"}
             </Button>
           )}
         </Stack>
+
+        {allowBuild && (
+          <Button
+            variant={isPublished ? "outlined" : "contained"}
+            color={isPublished ? "warning" : "primary"}
+            onClick={() => handlePublish(isPublished ? "draft" : "published")}
+            sx={{
+              display: { xs: "inline-flex", sm: "none" },
+              textTransform: "none",
+              fontWeight: 850,
+            }}
+          >
+            {isPublished ? "Unpublish Month" : "Publish Month"}
+          </Button>
+        )}
       </Stack>
 
       {!allowBuild && !isPublished && (
-        <Alert severity="warning" sx={{ mb: 2 }}>
-          This schedule has not been published yet. Please check back after the chief or coordinator publishes it.
+        <Alert severity="warning" sx={compactAlertSx}>
+          Schedule is not published yet.
         </Alert>
       )}
 
       {!allowBuild && isPublished && (
-        <Alert severity="info" sx={{ mb: 2 }}>
-          You have view-only access.
+        <Alert severity="info" sx={compactAlertSx}>
+          View-only access.
         </Alert>
       )}
 
       {allowBuild && (
-        <Alert severity={isPublished ? "success" : "warning"} sx={{ mb: 2 }}>
-          Month status: <b>{isPublished ? "Published" : "Draft"}</b>. Regular residents can only see published schedules.
+        <Alert severity={isPublished ? "success" : "warning"} sx={compactAlertSx}>
+          Month status: <b>{isPublished ? "Published" : "Draft"}</b>.
+          <Box component="span" sx={{ display: { xs: "none", sm: "inline" } }}>
+            {" "}Regular residents can only see published schedules.
+          </Box>
         </Alert>
       )}
 
-      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+      {error && <Alert severity="error" sx={compactAlertSx}>{error}</Alert>}
 
       {canViewSchedule && allowBuild && <ScheduleIssuesPanel issues={scheduleIssues} />}
 
-      <Card sx={{ borderRadius: 3, boxShadow: "0 10px 30px rgba(15, 23, 42, 0.08)", width: "100%" }}>
-        <CardContent sx={{ p: 1.25 }}>
+      <Card
+        sx={{
+          borderRadius: { xs: 2, md: 3 },
+          boxShadow: "0 10px 30px rgba(15, 23, 42, 0.08)",
+          width: "100%",
+          overflow: "hidden",
+        }}
+      >
+        <CardContent sx={{ p: { xs: 0.75, md: 1.25 } }}>
           {loading ? (
             <Stack alignItems="center" sx={{ py: 5 }}>
               <CircularProgress />
@@ -429,7 +487,7 @@ export default function MonthlyScheduleMatrixPage({
             <Box
               sx={{
                 overflow: "auto",
-                maxHeight: "calc(100vh - 245px)",
+                maxHeight: { xs: "calc(100vh - 210px)", md: "calc(100vh - 245px)" },
                 border: "1px solid",
                 borderColor: "divider",
                 borderRadius: 2,
@@ -439,9 +497,15 @@ export default function MonthlyScheduleMatrixPage({
               <Box
                 sx={{
                   display: "grid",
-                  gridTemplateColumns: `190px repeat(${days.length}, minmax(115px, 1fr))`,
-                  minWidth: 190 + days.length * 115,
-                  width: "100%",
+                  gridTemplateColumns: {
+                    xs: `minmax(118px, max-content) repeat(${days.length}, minmax(82px, max-content))`,
+                    md: `180px repeat(${days.length}, minmax(105px, 1fr))`,
+                  },
+                  minWidth: {
+                    xs: "max-content",
+                    md: 180 + days.length * 105,
+                  },
+                  width: { xs: "max-content", md: "100%" },
                 }}
               >
                 <Box sx={topLeftCell}>Service</Box>
@@ -453,17 +517,17 @@ export default function MonthlyScheduleMatrixPage({
 
                   return (
                     <Box key={day} sx={isWeekend(day) ? weekendHeaderCell : weekdayHeaderCell}>
-                      <Typography fontSize={11.5} fontWeight={900}>
+                      <Typography fontSize={{ xs: 10.5, md: 11.5 }} fontWeight={900} noWrap>
                         {formatDay(day)}
                       </Typography>
 
                       {allowBuild && dayIssues.length > 0 && (
                         <Box
                           sx={{
-                            mt: 0.35,
+                            mt: 0.25,
                             mx: "auto",
-                            width: 8,
-                            height: 8,
+                            width: 7,
+                            height: 7,
                             borderRadius: "50%",
                             backgroundColor: "#be123c",
                           }}
@@ -476,13 +540,18 @@ export default function MonthlyScheduleMatrixPage({
                 {residentCallServices.map((service) => (
                   <Box key={service.id} sx={{ display: "contents" }}>
                     <Box sx={isNightFloatService(service.id) ? nightServiceCell : serviceCell}>
-                      <Stack direction="row" spacing={0.75} alignItems="center">
+                      <Stack direction="row" spacing={{ xs: 0.5, md: 0.75 }} alignItems="center" sx={{ minWidth: 0 }}>
                         <Box sx={serviceIconBox}>{serviceIcon(service.name)}</Box>
-                        <Box>
-                          <Typography fontWeight={750} fontSize={12.5}>
+                        <Box sx={{ minWidth: 0 }}>
+                          <Typography fontWeight={800} fontSize={{ xs: 11.5, md: 12.5 }} noWrap>
                             {service.name}
                           </Typography>
-                          <Typography variant="caption" color="text.secondary">
+                          <Typography
+                            variant="caption"
+                            color="text.secondary"
+                            fontSize={{ xs: 9.5, md: 10.5 }}
+                            sx={{ display: { xs: "none", sm: "block" } }}
+                          >
                             {service.defaultStartTime}-{service.defaultEndTime}
                           </Typography>
                         </Box>
@@ -531,7 +600,7 @@ export default function MonthlyScheduleMatrixPage({
                           }}
                         >
                           {cell ? (
-                            <Stack spacing={0.25}>
+                            <Stack spacing={0.15}>
                               <Button
                                 variant="text"
                                 onClick={(e) => {
@@ -541,13 +610,17 @@ export default function MonthlyScheduleMatrixPage({
                                 sx={{
                                   p: 0,
                                   minWidth: 0,
+                                  maxWidth: "100%",
                                   textTransform: "none",
                                   justifyContent: "flex-start",
                                   color: "#0f172a",
                                   fontWeight: 850,
-                                  fontSize: 12,
-                                  lineHeight: 1.15,
+                                  fontSize: { xs: 11.5, md: 12 },
+                                  lineHeight: 1.1,
                                   textAlign: "left",
+                                  overflow: "hidden",
+                                  textOverflow: "ellipsis",
+                                  whiteSpace: "nowrap",
                                   "&:hover": {
                                     backgroundColor: "transparent",
                                     textDecoration: "underline",
@@ -562,25 +635,27 @@ export default function MonthlyScheduleMatrixPage({
                                   label="Issue"
                                   size="small"
                                   sx={{
-                                    height: 17,
-                                    fontSize: 9.5,
+                                    height: 16,
+                                    fontSize: 9,
                                     fontWeight: 900,
                                     color: "#be123c",
                                     backgroundColor: "#ffe4e6",
+                                    width: "fit-content",
                                   }}
                                 />
                               )}
 
                               {allowBuild && !hasCriticalIssue && hasWarningIssue && (
                                 <Chip
-                                  label="Warning"
+                                  label="Warn"
                                   size="small"
                                   sx={{
-                                    height: 17,
-                                    fontSize: 9.5,
+                                    height: 16,
+                                    fontSize: 9,
                                     fontWeight: 900,
                                     color: "#b45309",
                                     backgroundColor: "#fef3c7",
+                                    width: "fit-content",
                                   }}
                                 />
                               )}
@@ -592,8 +667,8 @@ export default function MonthlyScheduleMatrixPage({
                                   sx={{
                                     minWidth: 0,
                                     width: "fit-content",
-                                    p: "0 4px",
-                                    fontSize: 10,
+                                    p: "0 3px",
+                                    fontSize: 9.5,
                                     textTransform: "none",
                                   }}
                                   onClick={(e) => {
@@ -606,7 +681,7 @@ export default function MonthlyScheduleMatrixPage({
                               )}
                             </Stack>
                           ) : (
-                            <Typography variant="caption" color="text.secondary" fontSize={10.5}>
+                            <Typography variant="caption" color="text.secondary" fontSize={{ xs: 10, md: 10.5 }}>
                               {allowBuild ? "Assign" : "—"}
                             </Typography>
                           )}
@@ -644,6 +719,21 @@ export default function MonthlyScheduleMatrixPage({
   );
 }
 
+const compactAlertSx = {
+  mb: { xs: 1, md: 2 },
+  borderRadius: 2,
+  py: { xs: 0.25, md: 0.75 },
+  px: { xs: 1, md: 2 },
+  "& .MuiAlert-icon": {
+    fontSize: { xs: 20, md: 24 },
+    mr: { xs: 1, md: 1.5 },
+  },
+  "& .MuiAlert-message": {
+    fontSize: { xs: 13, md: 14 },
+    py: { xs: 0.35, md: 0.5 },
+  },
+};
+
 function ScheduleIssuesPanel({ issues }: { issues: ScheduleIssue[] }) {
   const critical = issues.filter((issue) => issue.severity === "critical");
   const warnings = issues.filter((issue) => issue.severity === "warning");
@@ -651,49 +741,65 @@ function ScheduleIssuesPanel({ issues }: { issues: ScheduleIssue[] }) {
 
   if (issues.length === 0) {
     return (
-      <Alert severity="success" sx={{ mb: 2, borderRadius: 2 }}>
-        No schedule conflicts detected for this visible period.
+      <Alert severity="success" sx={compactAlertSx}>
+        No schedule conflicts detected.
       </Alert>
     );
   }
 
   return (
-    <Card sx={{ mb: 2, borderRadius: 3 }}>
-      <CardContent sx={{ p: 1.5 }}>
-        <Stack direction={{ xs: "column", md: "row" }} justifyContent="space-between" spacing={1} sx={{ mb: 1 }}>
+    <Card sx={{ mb: { xs: 1, md: 2 }, borderRadius: 2 }}>
+      <CardContent sx={{ p: { xs: 1, md: 1.5 } }}>
+        <Stack
+          direction={{ xs: "column", md: "row" }}
+          justifyContent="space-between"
+          spacing={1}
+          sx={{ mb: 1 }}
+        >
           <Box>
-            <Typography fontWeight={900}>Schedule Warnings</Typography>
-            <Typography color="text.secondary" fontSize={12.5}>
-              Conflicts are warnings only. They do not block scheduling.
+            <Typography fontWeight={900} fontSize={{ xs: 13.5, md: 15 }}>
+              Schedule Warnings
+            </Typography>
+            <Typography color="text.secondary" fontSize={12}>
+              Conflicts are warnings only.
             </Typography>
           </Box>
 
-          <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap>
+          <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
             <IssueCountChip label="Critical" count={critical.length} severity="critical" />
             <IssueCountChip label="Warning" count={warnings.length} severity="warning" />
             <IssueCountChip label="Info" count={info.length} severity="info" />
           </Stack>
         </Stack>
 
-        <Stack spacing={0.6}>
-          {issues.slice(0, 6).map((issue) => {
+        <Stack spacing={0.5}>
+          {issues.slice(0, 3).map((issue) => {
             const style = issueSeverityStyle(issue.severity);
 
             return (
-              <Box key={issue.id} sx={{ p: 0.75, borderRadius: 2, backgroundColor: style.bg, border: "1px solid", borderColor: style.border }}>
-                <Typography fontSize={12.5} fontWeight={900} sx={{ color: style.color }}>
+              <Box
+                key={issue.id}
+                sx={{
+                  p: 0.65,
+                  borderRadius: 1.5,
+                  backgroundColor: style.bg,
+                  border: "1px solid",
+                  borderColor: style.border,
+                }}
+              >
+                <Typography fontSize={12} fontWeight={900} sx={{ color: style.color }}>
                   {issue.title}
                 </Typography>
-                <Typography fontSize={12} color="text.secondary">
+                <Typography fontSize={11.5} color="text.secondary">
                   {issue.message}
                 </Typography>
               </Box>
             );
           })}
 
-          {issues.length > 6 && (
-            <Typography fontSize={12} color="text.secondary">
-              + {issues.length - 6} more issue{issues.length - 6 === 1 ? "" : "s"}.
+          {issues.length > 3 && (
+            <Typography fontSize={11.5} color="text.secondary">
+              + {issues.length - 3} more issue{issues.length - 3 === 1 ? "" : "s"}.
             </Typography>
           )}
         </Stack>
@@ -718,6 +824,8 @@ function IssueCountChip({
       label={`${label}: ${count}`}
       size="small"
       sx={{
+        height: 21,
+        fontSize: 10.5,
         fontWeight: 900,
         color: style.color,
         backgroundColor: style.bg,
@@ -846,9 +954,9 @@ function MatrixCellDialog({
 }
 
 const topLeftCell = {
-  p: 0.65,
+  p: { xs: 0.55, md: 0.65 },
   fontWeight: 900,
-  fontSize: 12,
+  fontSize: { xs: 11.5, md: 12 },
   backgroundColor: "#e2e8f0",
   borderRight: "1px solid",
   borderBottom: "1px solid",
@@ -860,7 +968,7 @@ const topLeftCell = {
 };
 
 const weekdayHeaderCell = {
-  p: 0.65,
+  p: { xs: 0.45, md: 0.65 },
   backgroundColor: "#e2e8f0",
   borderRight: "1px solid",
   borderBottom: "1px solid",
@@ -877,7 +985,7 @@ const weekendHeaderCell = {
 };
 
 const serviceCell = {
-  p: 0.65,
+  p: { xs: 0.5, md: 0.65 },
   backgroundColor: "#f8fafc",
   borderRight: "1px solid",
   borderBottom: "1px solid",
@@ -885,6 +993,7 @@ const serviceCell = {
   position: "sticky",
   left: 0,
   zIndex: 2,
+  minWidth: 0,
 };
 
 const nightServiceCell = {
@@ -893,24 +1002,26 @@ const nightServiceCell = {
 };
 
 const serviceIconBox = {
-  width: 24,
-  height: 24,
+  width: { xs: 21, md: 24 },
+  height: { xs: 21, md: 24 },
   borderRadius: 1.25,
   display: "grid",
   placeItems: "center",
   backgroundColor: "#ffffff",
   border: "1px solid",
   borderColor: "#dbeafe",
-  fontSize: 14,
+  fontSize: { xs: 12.5, md: 14 },
+  flexShrink: 0,
 };
 
 const matrixCell = {
-  minHeight: 48,
-  p: 0.55,
+  minHeight: { xs: 38, md: 48 },
+  p: { xs: 0.45, md: 0.55 },
   borderRight: "1px solid",
   borderBottom: "1px solid",
   borderColor: "divider",
   backgroundColor: "white",
+  minWidth: 0,
   "&:hover": {
     backgroundColor: "#f8fafc",
   },

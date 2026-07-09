@@ -270,6 +270,11 @@ function buildBlockValidations({
   });
 }
 
+function formatShortDate(date: string) {
+  const [, month, day] = date.split("-");
+  return `${Number(month)}/${Number(day)}`;
+}
+
 export default function BlockSchedulePage({
   onOpenResidentProfile,
 }: {
@@ -541,19 +546,27 @@ export default function BlockSchedulePage({
   }
 
   return (
-    <Box sx={{ width: "100%", maxWidth: "none" }}>
+    <Box sx={{ width: "100%", maxWidth: "none", minWidth: 0 }}>
       <Stack
         direction={{ xs: "column", md: "row" }}
         justifyContent="space-between"
         alignItems={{ xs: "stretch", md: "center" }}
-        spacing={1.5}
-        sx={{ mb: 1.5 }}
+        spacing={{ xs: 1, md: 1.5 }}
+        sx={{ mb: { xs: 1, md: 1.5 } }}
       >
         <Box>
-          <Typography variant="h4" fontWeight={850} sx={{ lineHeight: 1 }}>
+          <Typography
+            variant="h4"
+            fontWeight={850}
+            sx={{ lineHeight: 1, fontSize: { xs: 25, md: 34 } }}
+          >
             Block Schedule
           </Typography>
-          <Typography color="text.secondary" fontSize={14}>
+          <Typography
+            color="text.secondary"
+            fontSize={14}
+            sx={{ display: { xs: "none", md: "block" } }}
+          >
             Compact rotation matrix by academic block with validation.
           </Typography>
         </Box>
@@ -563,31 +576,35 @@ export default function BlockSchedulePage({
           label="Search resident"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          sx={{ width: { xs: "100%", md: 260 } }}
+          sx={{
+            width: { xs: "100%", md: 260 },
+            "& input": {
+              fontWeight: 750,
+            },
+          }}
         />
       </Stack>
 
       {!allowBuild && (
-        <Alert severity="info" sx={{ mb: 2 }}>
-          You have view-only access. Chiefs, program coordinators, and admins can
-          edit block assignments.
+        <Alert severity="info" sx={compactAlertSx}>
+          View-only access.
         </Alert>
       )}
 
       {migrationMessage && (
-        <Alert severity="warning" sx={{ mb: 2 }}>
+        <Alert severity="warning" sx={compactAlertSx}>
           {migrationMessage}
         </Alert>
       )}
 
       {pageError && (
-        <Alert severity="error" sx={{ mb: 2 }}>
+        <Alert severity="error" sx={compactAlertSx}>
           {pageError}
         </Alert>
       )}
 
-      <Card sx={{ mb: 1.5, borderRadius: 3 }}>
-        <CardContent sx={{ p: 1.5 }}>
+      <Card sx={{ mb: { xs: 1, md: 1.5 }, borderRadius: 2 }}>
+        <CardContent sx={{ p: { xs: 1, md: 1.5 } }}>
           <Stack
             direction={{ xs: "column", lg: "row" }}
             spacing={1}
@@ -595,53 +612,45 @@ export default function BlockSchedulePage({
             alignItems={{ xs: "stretch", lg: "center" }}
           >
             <Box>
-              <Typography fontWeight={900} fontSize={15}>
+              <Typography fontWeight={900} fontSize={{ xs: 13.5, md: 15 }}>
                 Block Validation
               </Typography>
-              <Typography color="text.secondary" fontSize={12.5}>
+              <Typography
+                color="text.secondary"
+                fontSize={12}
+                sx={{ display: { xs: "none", sm: "block" } }}
+              >
                 Checks required coverage, missing residents, and duplicate block assignments.
               </Typography>
             </Box>
 
-            <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap>
+            <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
               <Chip
                 label={`${validationSummary.completeBlocks}/${validationSummary.totalBlocks} complete`}
                 size="small"
-                sx={{
-                  fontWeight: 900,
-                  color: "#15803d",
-                  backgroundColor: "#ecfdf5",
-                  border: "1px solid #bbf7d0",
-                }}
+                sx={summaryChipSx("#15803d", "#ecfdf5", "#bbf7d0")}
               />
 
               <Chip
                 label={`${validationSummary.averageCompletion}% assigned`}
                 size="small"
-                sx={{
-                  fontWeight: 900,
-                  color: "#2563eb",
-                  backgroundColor: "#eff6ff",
-                  border: "1px solid #bfdbfe",
-                }}
+                sx={summaryChipSx("#2563eb", "#eff6ff", "#bfdbfe")}
               />
 
               <Chip
                 label={`${validationSummary.totalIssues} issue${validationSummary.totalIssues === 1 ? "" : "s"}`}
                 size="small"
-                sx={{
-                  fontWeight: 900,
-                  color: validationSummary.totalIssues === 0 ? "#15803d" : "#be123c",
-                  backgroundColor: validationSummary.totalIssues === 0 ? "#ecfdf5" : "#fff1f2",
-                  border: "1px solid",
-                  borderColor: validationSummary.totalIssues === 0 ? "#bbf7d0" : "#fecdd3",
-                }}
+                sx={summaryChipSx(
+                  validationSummary.totalIssues === 0 ? "#15803d" : "#be123c",
+                  validationSummary.totalIssues === 0 ? "#ecfdf5" : "#fff1f2",
+                  validationSummary.totalIssues === 0 ? "#bbf7d0" : "#fecdd3"
+                )}
               />
             </Stack>
           </Stack>
 
-          <Box sx={{ overflowX: "auto", mt: 1.25 }}>
-            <Stack direction="row" spacing={0.75} sx={{ minWidth: "max-content" }}>
+          <Box sx={{ overflowX: "auto", mt: 1 }}>
+            <Stack direction="row" spacing={0.6} sx={{ minWidth: "max-content" }}>
               {blockValidations.map((validation) => (
                 <BlockValidationCard key={validation.block.id} validation={validation} />
               ))}
@@ -650,13 +659,23 @@ export default function BlockSchedulePage({
         </CardContent>
       </Card>
 
-      <Card sx={{ mb: 1.5, borderRadius: 2 }}>
-        <CardContent sx={{ p: 1 }}>
+      <Card sx={{ mb: { xs: 1, md: 1.5 }, borderRadius: 2 }}>
+        <CardContent sx={{ p: { xs: 0.5, md: 1 } }}>
           <Tabs
             value={tab}
             onChange={(_, value: BlockTab) => setTab(value)}
             variant="scrollable"
             scrollButtons="auto"
+            sx={{
+              minHeight: 38,
+              "& .MuiTab-root": {
+                minHeight: 38,
+                py: 0.75,
+                px: { xs: 1.25, md: 2 },
+                fontSize: { xs: 12, md: 13 },
+                fontWeight: 850,
+              },
+            }}
           >
             <Tab label="Everyone" value="Everyone" />
             <Tab label="PGY1" value="PGY-1" />
@@ -666,8 +685,16 @@ export default function BlockSchedulePage({
         </CardContent>
       </Card>
 
-      <Card sx={{ mb: 2, borderRadius: 3, boxShadow: "0 10px 30px rgba(15, 23, 42, 0.08)", width: "100%" }}>
-        <CardContent sx={{ p: 1.25 }}>
+      <Card
+        sx={{
+          mb: { xs: 1.5, md: 2 },
+          borderRadius: { xs: 2, md: 3 },
+          boxShadow: "0 10px 30px rgba(15, 23, 42, 0.08)",
+          width: "100%",
+          overflow: "hidden",
+        }}
+      >
+        <CardContent sx={{ p: { xs: 0.75, md: 1.25 } }}>
           {pageLoading ? (
             <Stack alignItems="center" sx={{ py: 5 }}>
               <CircularProgress />
@@ -683,7 +710,7 @@ export default function BlockSchedulePage({
             <Box
               sx={{
                 overflow: "auto",
-                maxHeight: "calc(100vh - 300px)",
+                maxHeight: { xs: "calc(100vh - 285px)", md: "calc(100vh - 300px)" },
                 border: "1px solid",
                 borderColor: "divider",
                 borderRadius: 2,
@@ -693,9 +720,15 @@ export default function BlockSchedulePage({
               <Box
                 sx={{
                   display: "grid",
-                  gridTemplateColumns: `190px repeat(${displayedBlocks.length}, minmax(118px, 1fr))`,
-                  minWidth: 190 + displayedBlocks.length * 118,
-                  width: "100%",
+                  gridTemplateColumns: {
+                    xs: `minmax(120px, max-content) repeat(${displayedBlocks.length}, minmax(86px, max-content))`,
+                    md: `180px repeat(${displayedBlocks.length}, minmax(108px, 1fr))`,
+                  },
+                  minWidth: {
+                    xs: "max-content",
+                    md: 180 + displayedBlocks.length * 108,
+                  },
+                  width: { xs: "max-content", md: "100%" },
                 }}
               >
                 <Box sx={topLeftCell}>Resident</Box>
@@ -708,18 +741,18 @@ export default function BlockSchedulePage({
 
                   return (
                     <Box key={block.id} sx={headerCell}>
-                      <Typography fontWeight={900} fontSize={11.5}>
+                      <Typography fontWeight={900} fontSize={{ xs: 10.5, md: 11.5 }} noWrap>
                         {block.name.replace("Block ", "B")}
                       </Typography>
-                      <Typography variant="caption" fontSize={10.5}>
-                        {block.startDate.slice(5)} → {block.endDate.slice(5)}
+                      <Typography variant="caption" fontSize={{ xs: 9.5, md: 10.5 }} noWrap>
+                        {formatShortDate(block.startDate)}→{formatShortDate(block.endDate)}
                       </Typography>
                       <Box
                         sx={{
-                          mt: 0.35,
+                          mt: 0.25,
                           mx: "auto",
-                          width: 8,
-                          height: 8,
+                          width: 7,
+                          height: 7,
                           borderRadius: "50%",
                           backgroundColor: status.color,
                         }}
@@ -737,13 +770,17 @@ export default function BlockSchedulePage({
                         sx={{
                           p: 0,
                           minWidth: 0,
+                          maxWidth: "100%",
                           textTransform: "none",
                           justifyContent: "flex-start",
                           color: "#0f172a",
                           fontWeight: 850,
-                          fontSize: 12,
+                          fontSize: { xs: 11.5, md: 12 },
                           textAlign: "left",
                           lineHeight: 1.1,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
                           "&:hover": {
                             backgroundColor: "transparent",
                             textDecoration: "underline",
@@ -752,7 +789,7 @@ export default function BlockSchedulePage({
                       >
                         {resident.displayName}
                       </Button>
-                      <Typography variant="caption" color="text.secondary" fontSize={10.5} display="block">
+                      <Typography variant="caption" color="text.secondary" fontSize={{ xs: 9.5, md: 10.5 }} display="block">
                         {resident.pgy}
                       </Typography>
                     </Box>
@@ -785,17 +822,31 @@ export default function BlockSchedulePage({
                           }}
                         >
                           {assignment ? (
-                            <Stack spacing={0.2}>
+                            <Stack spacing={0.15} sx={{ minWidth: 0 }}>
                               <Typography
                                 fontWeight={850}
-                                fontSize={11.5}
-                                sx={{ color: color?.color }}
+                                fontSize={{ xs: 10.5, md: 11.5 }}
+                                sx={{
+                                  color: color?.color,
+                                  overflow: "hidden",
+                                  textOverflow: "ellipsis",
+                                  whiteSpace: "nowrap",
+                                }}
                               >
                                 {assignment.rotationName}
                               </Typography>
 
                               {assignment.notes && (
-                                <Typography variant="caption" color="text.secondary" fontSize={10}>
+                                <Typography
+                                  variant="caption"
+                                  color="text.secondary"
+                                  fontSize={{ xs: 9, md: 10 }}
+                                  sx={{
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                    whiteSpace: "nowrap",
+                                  }}
+                                >
                                   {assignment.notes}
                                 </Typography>
                               )}
@@ -821,7 +872,7 @@ export default function BlockSchedulePage({
                               )}
                             </Stack>
                           ) : (
-                            <Typography variant="caption" color="text.secondary" fontSize={10.5}>
+                            <Typography variant="caption" color="text.secondary" fontSize={{ xs: 10, md: 10.5 }}>
                               {allowBuild ? "Assign" : "—"}
                             </Typography>
                           )}
@@ -836,16 +887,16 @@ export default function BlockSchedulePage({
         </CardContent>
       </Card>
 
-      <Card sx={{ mb: 2, borderRadius: 3 }}>
-        <CardContent sx={{ p: 1.5 }}>
-          <Typography variant="h6" fontWeight={850} sx={{ mb: 1 }}>
+      <Card sx={{ mb: { xs: 1.5, md: 2 }, borderRadius: 2 }}>
+        <CardContent sx={{ p: { xs: 1, md: 1.5 } }}>
+          <Typography variant="h6" fontWeight={850} sx={{ mb: 1, fontSize: { xs: 15, md: 20 } }}>
             Resident Block Counts
           </Typography>
 
           {activeResidents.length === 0 ? (
             <Typography color="text.secondary">No residents found.</Typography>
           ) : (
-            <Stack spacing={0.75}>
+            <Stack spacing={0.6}>
               {activeResidents.map((resident) => {
                 const counts = rotationCountsByResident[resident.id] || {};
                 const entries = Object.entries(counts).sort((a, b) =>
@@ -858,11 +909,11 @@ export default function BlockSchedulePage({
                     sx={{
                       display: "grid",
                       gridTemplateColumns: { xs: "1fr", md: "190px 1fr" },
-                      gap: 1,
+                      gap: { xs: 0.5, md: 1 },
                       alignItems: "center",
                       borderBottom: "1px solid",
                       borderColor: "#eef2f7",
-                      py: 0.75,
+                      py: { xs: 0.55, md: 0.75 },
                     }}
                   >
                     <Box>
@@ -876,7 +927,7 @@ export default function BlockSchedulePage({
                           justifyContent: "flex-start",
                           color: "#0f172a",
                           fontWeight: 850,
-                          fontSize: 13,
+                          fontSize: { xs: 12, md: 13 },
                           "&:hover": {
                             backgroundColor: "transparent",
                             textDecoration: "underline",
@@ -885,7 +936,7 @@ export default function BlockSchedulePage({
                       >
                         {resident.displayName}
                       </Button>
-                      <Typography variant="caption" color="text.secondary" display="block">
+                      <Typography variant="caption" color="text.secondary" display="block" fontSize={{ xs: 10, md: 11 }}>
                         {resident.pgy}
                       </Typography>
                     </Box>
@@ -901,8 +952,8 @@ export default function BlockSchedulePage({
                               label={`${rotationName}: ${count}`}
                               size="small"
                               sx={{
-                                height: 22,
-                                fontSize: 11,
+                                height: 21,
+                                fontSize: 10.5,
                                 fontWeight: 800,
                                 color: color.color,
                                 backgroundColor: color.bg,
@@ -927,8 +978,8 @@ export default function BlockSchedulePage({
       </Card>
 
       {allowBuild && (
-        <Card sx={{ borderRadius: 3, opacity: 0.92 }}>
-          <CardContent sx={{ p: 1.5 }}>
+        <Card sx={{ borderRadius: 2, opacity: 0.92 }}>
+          <CardContent sx={{ p: { xs: 1, md: 1.5 } }}>
             <Typography variant="subtitle2" fontWeight={850} sx={{ mb: 1 }}>
               Academic Year Setup
             </Typography>
@@ -996,6 +1047,33 @@ export default function BlockSchedulePage({
   );
 }
 
+const compactAlertSx = {
+  mb: { xs: 1, md: 2 },
+  borderRadius: 2,
+  py: { xs: 0.25, md: 0.75 },
+  px: { xs: 1, md: 2 },
+  "& .MuiAlert-icon": {
+    fontSize: { xs: 20, md: 24 },
+    mr: { xs: 1, md: 1.5 },
+  },
+  "& .MuiAlert-message": {
+    fontSize: { xs: 13, md: 14 },
+    py: { xs: 0.35, md: 0.5 },
+  },
+};
+
+function summaryChipSx(color: string, backgroundColor: string, borderColor: string) {
+  return {
+    height: 22,
+    fontSize: 10.5,
+    fontWeight: 900,
+    color,
+    backgroundColor,
+    border: "1px solid",
+    borderColor,
+  };
+}
+
 function BlockValidationCard({ validation }: { validation: BlockValidation }) {
   const status = validationColor(validation.issueCount, validation.completionPercent);
   const rotationIssues = validation.rotationValidations.filter(
@@ -1005,22 +1083,22 @@ function BlockValidationCard({ validation }: { validation: BlockValidation }) {
   return (
     <Box
       sx={{
-        width: 230,
-        minHeight: 126,
-        p: 1,
+        width: { xs: 190, md: 230 },
+        minHeight: { xs: 102, md: 126 },
+        p: { xs: 0.75, md: 1 },
         borderRadius: 2,
         backgroundColor: status.bg,
         border: "1px solid",
         borderColor: status.border,
       }}
     >
-      <Stack spacing={0.65}>
+      <Stack spacing={0.5}>
         <Stack direction="row" justifyContent="space-between" spacing={1}>
           <Box>
-            <Typography fontSize={12.5} fontWeight={950} sx={{ color: status.color }}>
+            <Typography fontSize={{ xs: 11.5, md: 12.5 }} fontWeight={950} sx={{ color: status.color }}>
               {validation.block.name.replace("Block ", "B")}
             </Typography>
-            <Typography variant="caption" color="text.secondary">
+            <Typography variant="caption" color="text.secondary" fontSize={{ xs: 10, md: 11 }}>
               {validation.assignedResidents}/{validation.totalResidents} assigned
             </Typography>
           </Box>
@@ -1056,32 +1134,32 @@ function BlockValidationCard({ validation }: { validation: BlockValidation }) {
         />
 
         {validation.issueCount === 0 && validation.completionPercent === 100 ? (
-          <Typography fontSize={11.5} fontWeight={800} sx={{ color: "#15803d" }}>
-            ✓ No issues found
+          <Typography fontSize={{ xs: 10.5, md: 11.5 }} fontWeight={800} sx={{ color: "#15803d" }}>
+            ✓ No issues
           </Typography>
         ) : (
-          <Stack spacing={0.35}>
+          <Stack spacing={0.25}>
             {validation.missingResidents.length > 0 && (
-              <Typography fontSize={11} sx={{ color: "#be123c" }}>
-                ⚠ {validation.missingResidents.length} resident{validation.missingResidents.length === 1 ? "" : "s"} missing
+              <Typography fontSize={{ xs: 10, md: 11 }} sx={{ color: "#be123c" }}>
+                ⚠ {validation.missingResidents.length} missing
               </Typography>
             )}
 
             {validation.duplicateResidents.length > 0 && (
-              <Typography fontSize={11} sx={{ color: "#be123c" }}>
-                ⚠ {validation.duplicateResidents.length} duplicate resident{validation.duplicateResidents.length === 1 ? "" : "s"}
+              <Typography fontSize={{ xs: 10, md: 11 }} sx={{ color: "#be123c" }}>
+                ⚠ {validation.duplicateResidents.length} duplicate
               </Typography>
             )}
 
-            {rotationIssues.slice(0, 3).map((item) => (
-              <Typography key={item.rotationId} fontSize={11} sx={{ color: "#b45309" }}>
+            {rotationIssues.slice(0, 2).map((item) => (
+              <Typography key={item.rotationId} fontSize={{ xs: 10, md: 11 }} sx={{ color: "#b45309" }} noWrap>
                 ⚠ {item.rotationName}: {item.issues[0]}
               </Typography>
             ))}
 
-            {rotationIssues.length > 3 && (
-              <Typography fontSize={11} color="text.secondary">
-                + {rotationIssues.length - 3} more rotation issue{rotationIssues.length - 3 === 1 ? "" : "s"}
+            {rotationIssues.length > 2 && (
+              <Typography fontSize={{ xs: 10, md: 11 }} color="text.secondary">
+                + {rotationIssues.length - 2} more
               </Typography>
             )}
           </Stack>
@@ -1176,9 +1254,9 @@ function BlockAssignmentDialog({
 }
 
 const topLeftCell = {
-  p: 0.65,
+  p: { xs: 0.55, md: 0.65 },
   fontWeight: 900,
-  fontSize: 12,
+  fontSize: { xs: 11.5, md: 12 },
   backgroundColor: "#e2e8f0",
   borderRight: "1px solid",
   borderBottom: "1px solid",
@@ -1190,7 +1268,7 @@ const topLeftCell = {
 };
 
 const headerCell = {
-  p: 0.65,
+  p: { xs: 0.45, md: 0.65 },
   fontWeight: 900,
   backgroundColor: "#e2e8f0",
   borderRight: "1px solid",
@@ -1203,7 +1281,7 @@ const headerCell = {
 };
 
 const residentCell = {
-  p: 0.65,
+  p: { xs: 0.5, md: 0.65 },
   backgroundColor: "#f8fafc",
   borderRight: "1px solid",
   borderBottom: "1px solid",
@@ -1211,13 +1289,15 @@ const residentCell = {
   position: "sticky",
   left: 0,
   zIndex: 2,
+  minWidth: 0,
 };
 
 const matrixCell = {
-  minHeight: 52,
-  p: 0.55,
+  minHeight: { xs: 38, md: 52 },
+  p: { xs: 0.45, md: 0.55 },
   borderRight: "1px solid",
   borderBottom: "1px solid",
   borderColor: "divider",
   backgroundColor: "white",
+  minWidth: 0,
 };
