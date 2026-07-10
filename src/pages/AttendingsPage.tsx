@@ -26,6 +26,7 @@ import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import ToggleOffIcon from "@mui/icons-material/ToggleOff";
 import ToggleOnIcon from "@mui/icons-material/ToggleOn";
+import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
 
 import { useAuth } from "../context/AuthContext";
 import { useAttendings } from "../hooks/useAttendings";
@@ -80,7 +81,11 @@ function isAdmittingAttending(attending: Attending) {
   );
 }
 
-export default function AttendingsPage() {
+export default function AttendingsPage({
+  onOpenAttendingProfile,
+}: {
+  onOpenAttendingProfile?: (attendingId: string) => void;
+}) {
   const { profile } = useAuth();
   const allowManage = canManageResidents(profile?.role);
 
@@ -239,8 +244,8 @@ export default function AttendingsPage() {
                   sx={{
                     display: "grid",
                     gridTemplateColumns: allowManage
-                      ? "minmax(190px,1.4fr) 170px 110px 130px 130px 120px"
-                      : "minmax(190px,1.4fr) 170px 110px 130px 130px",
+                      ? "minmax(210px,1.4fr) 190px 150px 130px 150px"
+                      : "minmax(210px,1.4fr) 190px 150px 130px",
                     gap: 1,
                     px: 1,
                     py: 0.75,
@@ -250,7 +255,6 @@ export default function AttendingsPage() {
                 >
                   <HeaderText>Name</HeaderText>
                   <HeaderText>Group / Specialty</HeaderText>
-                  <HeaderText>Pager</HeaderText>
                   <HeaderText>Phone</HeaderText>
                   <HeaderText>Status</HeaderText>
                   {allowManage && <HeaderText>Controls</HeaderText>}
@@ -262,8 +266,8 @@ export default function AttendingsPage() {
                     sx={{
                       display: "grid",
                       gridTemplateColumns: allowManage
-                        ? "minmax(190px,1.4fr) 170px 110px 130px 130px 120px"
-                        : "minmax(190px,1.4fr) 170px 110px 130px 130px",
+                        ? "minmax(210px,1.4fr) 190px 150px 130px 150px"
+                        : "minmax(210px,1.4fr) 190px 150px 130px",
                       gap: 1,
                       alignItems: "center",
                       px: 1,
@@ -275,10 +279,26 @@ export default function AttendingsPage() {
                     }}
                   >
                     <Box>
-                      <Typography fontSize={13.5} fontWeight={750}>
+                      <Button
+                        variant="text"
+                        onClick={() => onOpenAttendingProfile?.(attending.id)}
+                        sx={{
+                          p: 0,
+                          minWidth: 0,
+                          textTransform: "none",
+                          fontSize: 13.5,
+                          fontWeight: 850,
+                          color: "#0f172a",
+                          justifyContent: "flex-start",
+                          "&:hover": {
+                            backgroundColor: "transparent",
+                            textDecoration: "underline",
+                          },
+                        }}
+                      >
                         {attending.displayName}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
+                      </Button>
+                      <Typography variant="caption" color="text.secondary" display="block">
                         {attending.email || `${attending.firstName} ${attending.lastName}`}
                       </Typography>
                     </Box>
@@ -307,10 +327,6 @@ export default function AttendingsPage() {
                     </Stack>
 
                     <Typography fontSize={13} fontWeight={700}>
-                      {attending.pager ? `📟 ${attending.pager}` : "—"}
-                    </Typography>
-
-                    <Typography fontSize={13} fontWeight={700}>
                       {attending.phone ? `☎ ${attending.phone}` : "—"}
                     </Typography>
 
@@ -331,6 +347,16 @@ export default function AttendingsPage() {
 
                     {allowManage && (
                       <Stack direction="row" spacing={0.25} alignItems="center">
+                        <Tooltip title="Open attending profile">
+                          <IconButton
+                            size="small"
+                            color="primary"
+                            onClick={() => onOpenAttendingProfile?.(attending.id)}
+                          >
+                            <CalendarMonthIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+
                         <Tooltip title="Edit">
                           <IconButton
                             size="small"

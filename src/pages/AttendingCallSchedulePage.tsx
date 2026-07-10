@@ -25,6 +25,7 @@ import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
+import PrintIcon from "@mui/icons-material/Print";
 import TodayIcon from "@mui/icons-material/Today";
 
 import { useAuth } from "../context/AuthContext";
@@ -52,11 +53,51 @@ type CoreRow = {
 };
 
 const coreRows: CoreRow[] = [
-  { id: "observation", name: "Observation", shortName: "OBS", displayOrder: 1, coverageStartTime: "07:00", coverageEndTime: "07:00", coverageNote: "24h" },
-  { id: "2n2-tele-2n1-ccu-attending-on-call", name: "2N2 (Tele), 2N1, CCU Attending on Call", shortName: "2N/Tele/CCU", displayOrder: 2, coverageStartTime: "07:00", coverageEndTime: "07:00", coverageNote: "24h" },
-  { id: "4n-1-2-3w-attending-on-record", name: "4 North 1&2, 3W Attending On Record", shortName: "4N/3W Record", displayOrder: 3, coverageStartTime: "07:00", coverageEndTime: "07:00", coverageNote: "24h" },
-  { id: "4n-1-2-3w-attending-on-call", name: "4 North 1&2, 3W Attending On Call", shortName: "4N/3W Call", displayOrder: 4, coverageStartTime: "07:00", coverageEndTime: "07:00", coverageNote: "24h" },
-  { id: "faculty-attending-on-call", name: "Faculty Attending on Call", shortName: "Faculty", displayOrder: 5, coverageStartTime: "07:00", coverageEndTime: "07:00", coverageNote: "24h" },
+  {
+    id: "observation",
+    name: "Observation",
+    shortName: "Observation",
+    displayOrder: 1,
+    coverageStartTime: "07:00",
+    coverageEndTime: "07:00",
+    coverageNote: "24h",
+  },
+  {
+    id: "2n2-tele-2n1-ccu-attending-on-call",
+    name: "2N2 (Tele), 2N1, CCU Attending on Call",
+    shortName: "2N2/2N1/CCU On Call",
+    displayOrder: 2,
+    coverageStartTime: "07:00",
+    coverageEndTime: "07:00",
+    coverageNote: "24h",
+  },
+  {
+    id: "4n-1-2-3w-attending-on-record",
+    name: "4 North 1&2, 3W Attending On Record",
+    shortName: "4N/3W On Record",
+    displayOrder: 3,
+    coverageStartTime: "07:00",
+    coverageEndTime: "07:00",
+    coverageNote: "24h",
+  },
+  {
+    id: "4n-1-2-3w-attending-on-call",
+    name: "4 North 1&2, 3W Attending On Call",
+    shortName: "4N/3W On Call",
+    displayOrder: 4,
+    coverageStartTime: "07:00",
+    coverageEndTime: "07:00",
+    coverageNote: "24h",
+  },
+  {
+    id: "faculty-attending-on-call",
+    name: "Faculty Attending on Call",
+    shortName: "Faculty On Call",
+    displayOrder: 5,
+    coverageStartTime: "07:00",
+    coverageEndTime: "07:00",
+    coverageNote: "24h",
+  },
 ];
 
 function todayDate() {
@@ -69,7 +110,10 @@ function parseDate(value: string) {
 }
 
 function toDateInputValue(date: Date) {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 function addDays(date: Date, days: number) {
@@ -134,36 +178,6 @@ function displayServiceName(name: string) {
     .trim();
 }
 
-function shortServiceName(name: string) {
-  const cleaned = displayServiceName(name);
-  const lower = cleaned.toLowerCase();
-
-  if (lower.includes("observation")) return "OBS";
-  if (lower.includes("gastro") || lower === "gi") return "GI";
-  if (lower.includes("neuro")) return "Neuro";
-  if (lower.includes("card") || lower.includes("ccu")) return "Card/CCU";
-  if (lower.includes("pulm")) return "Pulm";
-  if (lower.includes("micu")) return "MICU";
-  if (lower.includes("infect") || lower === "id") return "ID";
-  if (lower.includes("neph")) return "Neph";
-  if (lower.includes("rheum")) return "Rheum";
-  if (lower.includes("heme")) return "Heme";
-  if (lower.includes("onc")) return "Onc";
-  if (lower.includes("faculty")) return "Faculty";
-  if (lower.includes("4 north") || lower.includes("4n")) return "4N/3W";
-  if (lower.includes("2n") || lower.includes("tele")) return "2N/Tele";
-
-  return cleaned.length > 18 ? cleaned.slice(0, 18) : cleaned;
-}
-
-function shortAttendingName(name: string) {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length <= 1) return name;
-  const last = parts[parts.length - 1];
-  const firstInitial = parts[0][0] ? `${parts[0][0]}.` : "";
-  return `${firstInitial} ${last}`;
-}
-
 function serviceSpecialtyKey(serviceName: string) {
   const text = normalizeText(serviceName);
 
@@ -183,7 +197,10 @@ function serviceSpecialtyKey(serviceName: string) {
   return text;
 }
 
-function attendingMatchesService(attending: Attending, service?: ScheduleService | null) {
+function attendingMatchesService(
+  attending: Attending,
+  service?: ScheduleService | null
+) {
   if (!service) return true;
 
   if (service.attendingScheduleType === "Core") {
@@ -191,7 +208,12 @@ function attendingMatchesService(attending: Attending, service?: ScheduleService
     const serviceKey = serviceSpecialtyKey(service.name);
 
     if (serviceKey.includes("observation")) {
-      return combined.includes("observation") || combined.includes("medicine") || combined.includes("faculty");
+      return (
+        combined.includes("observation") ||
+        combined.includes("medicine") ||
+        combined.includes("faculty") ||
+        combined.includes("hospitalist")
+      );
     }
 
     if (serviceKey.includes("faculty")) {
@@ -218,6 +240,14 @@ function attendingMatchesService(attending: Attending, service?: ScheduleService
 
   if (serviceKey === "infectiousdisease") {
     return attendingText.includes("infectiousdisease") || attendingText.includes("id");
+  }
+
+  if (serviceKey === "hematology" || serviceKey === "oncology") {
+    return attendingText.includes("hematology") || attendingText.includes("oncology");
+  }
+
+  if (serviceKey === "pulmonary") {
+    return attendingText.includes("pulmonary") || attendingText.includes("pulm") || attendingText.includes("micu");
   }
 
   return attendingText.includes(serviceKey);
@@ -281,7 +311,11 @@ function findAssignmentForCell({
   );
 }
 
-export default function AttendingCallSchedulePage() {
+export default function AttendingCallSchedulePage({
+  onOpenAttendingProfile,
+}: {
+  onOpenAttendingProfile?: (attendingId: string) => void;
+}) {
   const { profile } = useAuth();
   const allowBuild = canBuildSchedule(profile?.role);
 
@@ -382,56 +416,75 @@ export default function AttendingCallSchedulePage() {
   }
 
   function goPreviousWeek() {
-    setWeekStartDate((current) => toDateInputValue(addDays(parseDate(current), -7)));
+    setWeekStartDate((current) =>
+      toDateInputValue(addDays(parseDate(current), -7))
+    );
   }
 
   function goNextWeek() {
-    setWeekStartDate((current) => toDateInputValue(addDays(parseDate(current), 7)));
+    setWeekStartDate((current) =>
+      toDateInputValue(addDays(parseDate(current), 7))
+    );
   }
 
   function goToday() {
     setWeekStartDate(toDateInputValue(getMonday(new Date())));
   }
 
+  function handlePrint() {
+    window.print();
+  }
+
   return (
-    <Box sx={{ width: "100%", maxWidth: "none", minWidth: 0 }}>
+    <Box id="attending-schedule-print-area">
+      <style>{`
+        .attending-print-title { display: none; }
+        @media print {
+          @page { size: landscape; margin: 0.35in; }
+          body * { visibility: hidden !important; }
+          #attending-schedule-print-area, #attending-schedule-print-area * { visibility: visible !important; }
+          #attending-schedule-print-area { position: absolute; left: 0; top: 0; width: 100%; }
+          .attending-print-hide { display: none !important; }
+          .attending-print-title { display: block !important; margin-bottom: 8px !important; }
+          .MuiCard-root { box-shadow: none !important; }
+        }
+      `}</style>
+
+      <Box className="attending-print-title">
+        <Typography variant="h5" fontWeight={900}>
+          WhosOn Attending Call Schedule
+        </Typography>
+        <Typography fontSize={13}>
+          {tab === "Core" ? "Admitting / Core" : "Specialty / Consulting"} • {formatWeekRange(weekDays)}
+        </Typography>
+      </Box>
+
       <Stack
-        direction={{ xs: "column", md: "row" }}
-        spacing={{ xs: 1, md: 1.5 }}
+        direction={{ xs: "column", lg: "row" }}
+        spacing={1.5}
         justifyContent="space-between"
-        alignItems={{ xs: "stretch", md: "center" }}
-        sx={{ mb: { xs: 1, md: 1.5 } }}
+        alignItems={{ xs: "stretch", lg: "center" }}
+        sx={{ mb: 1.5 }}
+        className="attending-print-hide"
       >
         <Box>
-          <Typography
-            variant="h4"
-            fontWeight={850}
-            sx={{ lineHeight: 1, fontSize: { xs: 25, md: 34 } }}
-          >
+          <Typography variant="h4" fontWeight={850} sx={{ lineHeight: 1 }}>
             Attending Call Schedule
           </Typography>
-          <Typography
-            color="text.secondary"
-            fontSize={14}
-            sx={{ display: { xs: "none", md: "block" } }}
-          >
+          <Typography color="text.secondary" fontSize={14}>
             Weekly attending coverage for admitting/core and specialty consulting services.
           </Typography>
         </Box>
 
-        <Stack direction="row" spacing={0.75} alignItems="center">
-          <Button
-            variant="outlined"
-            onClick={goPreviousWeek}
-            sx={{ minWidth: { xs: 42, md: 48 }, px: { xs: 0.75, md: 1.5 } }}
-          >
+        <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
+          <Button variant="outlined" onClick={goPreviousWeek}>
             <ChevronLeftIcon />
           </Button>
 
           <Box
             sx={{
-              height: 38,
-              px: { xs: 1, md: 2 },
+              height: 40,
+              px: 2,
               borderRadius: 2,
               fontWeight: 850,
               display: "grid",
@@ -439,20 +492,14 @@ export default function AttendingCallSchedulePage() {
               backgroundColor: "#f8fafc",
               border: "1px solid",
               borderColor: "divider",
-              fontSize: { xs: 12, md: 14 },
-              flex: { xs: 1, md: "unset" },
-              minWidth: 0,
-              whiteSpace: "nowrap",
+              fontSize: 14,
+              minWidth: 190,
             }}
           >
             {formatWeekRange(weekDays)}
           </Box>
 
-          <Button
-            variant="outlined"
-            onClick={goNextWeek}
-            sx={{ minWidth: { xs: 42, md: 48 }, px: { xs: 0.75, md: 1.5 } }}
-          >
+          <Button variant="outlined" onClick={goNextWeek}>
             <ChevronRightIcon />
           </Button>
 
@@ -460,82 +507,53 @@ export default function AttendingCallSchedulePage() {
             variant="outlined"
             startIcon={<TodayIcon />}
             onClick={goToday}
-            sx={{
-              textTransform: "none",
-              fontWeight: 800,
-              minWidth: { xs: 42, md: 92 },
-              px: { xs: 1, md: 1.5 },
-              "& .MuiButton-startIcon": {
-                mr: { xs: 0, md: 0.75 },
-              },
-            }}
+            sx={{ textTransform: "none", fontWeight: 800 }}
           >
-            <Box component="span" sx={{ display: { xs: "none", md: "inline" } }}>
-              This Week
-            </Box>
+            This Week
           </Button>
 
-          {allowBuild && tab === "Specialty" && (
+          <Button
+            variant="outlined"
+            startIcon={<PrintIcon />}
+            onClick={handlePrint}
+            sx={{ textTransform: "none", fontWeight: 800 }}
+          >
+            Print / PDF
+          </Button>
+
+          {allowBuild && (
             <Button
               variant="contained"
               startIcon={<AddIcon />}
-              onClick={() => setAddingAssignment({ tab: "Specialty" })}
-              sx={{
-                display: { xs: "none", sm: "inline-flex" },
-                textTransform: "none",
-                fontWeight: 800,
-              }}
+              onClick={() => setAddingAssignment({ tab })}
+              sx={{ textTransform: "none", fontWeight: 800 }}
             >
-              Add Consult
+              {tab === "Core" ? "Add Admitting" : "Add Consult"}
             </Button>
           )}
         </Stack>
-
-        {allowBuild && tab === "Specialty" && (
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => setAddingAssignment({ tab: "Specialty" })}
-            sx={{
-              display: { xs: "inline-flex", sm: "none" },
-              textTransform: "none",
-              fontWeight: 800,
-            }}
-          >
-            Add Consult
-          </Button>
-        )}
       </Stack>
 
       {!allowBuild && (
-        <Alert severity="info" sx={compactAlertSx}>
-          View-only access.
+        <Alert severity="info" sx={{ mb: 1.5 }} className="attending-print-hide">
+          You have view-only access. Chiefs, coordinators, and admins can edit
+          attending call schedules.
         </Alert>
       )}
 
       {error && (
-        <Alert severity="error" sx={compactAlertSx}>
+        <Alert severity="error" sx={{ mb: 1.5 }} className="attending-print-hide">
           {error}
         </Alert>
       )}
 
-      <Card sx={{ mb: { xs: 1, md: 1.5 }, borderRadius: 2 }}>
-        <CardContent sx={{ p: { xs: 0.5, md: 1 } }}>
+      <Card sx={{ mb: 1.5, borderRadius: 2 }} className="attending-print-hide">
+        <CardContent sx={{ p: 1 }}>
           <Tabs
             value={tab}
             onChange={(_, value: ScheduleTab) => setTab(value)}
             variant="scrollable"
             scrollButtons="auto"
-            sx={{
-              minHeight: 38,
-              "& .MuiTab-root": {
-                minHeight: 38,
-                py: 0.75,
-                px: { xs: 1.25, md: 2 },
-                fontSize: { xs: 12, md: 13 },
-                fontWeight: 850,
-              },
-            }}
           >
             <Tab label="Admitting / Core" value="Core" />
             <Tab label="Specialty / Consulting" value="Specialty" />
@@ -543,14 +561,8 @@ export default function AttendingCallSchedulePage() {
         </CardContent>
       </Card>
 
-      <Card
-        sx={{
-          borderRadius: { xs: 2, md: 3 },
-          boxShadow: "0 10px 30px rgba(15,23,42,0.08)",
-          overflow: "hidden",
-        }}
-      >
-        <CardContent sx={{ p: { xs: 0.75, md: 1 } }}>
+      <Card sx={{ borderRadius: 3, boxShadow: "0 10px 30px rgba(15,23,42,0.08)" }}>
+        <CardContent sx={{ p: 1 }}>
           {loading ? (
             <Stack alignItems="center" sx={{ py: 5 }}>
               <CircularProgress />
@@ -563,29 +575,202 @@ export default function AttendingCallSchedulePage() {
               No services found for this tab.
             </Typography>
           ) : (
-            <>
-              <DesktopMatrix
-                tab={tab}
-                weekDays={weekDays}
-                visibleServices={visibleServices}
-                assignments={assignments}
-                allowBuild={allowBuild}
-                onAdd={(date, service) => setAddingAssignment({ tab, date, service })}
-                onEdit={setEditingAssignment}
-                onDelete={handleDelete}
-              />
+            <Box
+              sx={{
+                overflow: "auto",
+                maxHeight: { xs: "calc(100vh - 205px)", md: "calc(100vh - 205px)" },
+                border: "1px solid",
+                borderColor: "divider",
+                borderRadius: 2,
+                "@media print": {
+                  maxHeight: "none",
+                  overflow: "visible",
+                  border: "1px solid #94a3b8",
+                },
+              }}
+            >
+              <Box
+                sx={{
+                  display: "grid",
+                  gridTemplateColumns: {
+                    xs: `190px repeat(7, 120px)`,
+                    md: `minmax(190px, 1.35fr) repeat(7, minmax(108px, 1fr))`,
+                  },
+                  minWidth: { xs: 190 + 7 * 120, md: 190 + 7 * 108 },
+                  width: { xs: "max-content", md: "100%" },
+                  "@media print": {
+                    gridTemplateColumns: "190px repeat(7, 1fr)",
+                    minWidth: "0 !important",
+                    width: "100% !important",
+                  },
+                }}
+              >
+                <Box sx={topLeftCell}>Service</Box>
 
-              <MobileCards
-                tab={tab}
-                weekDays={weekDays}
-                visibleServices={visibleServices}
-                assignments={assignments}
-                allowBuild={allowBuild}
-                onAdd={(date, service) => setAddingAssignment({ tab, date, service })}
-                onEdit={setEditingAssignment}
-                onDelete={handleDelete}
-              />
-            </>
+                {weekDays.map((day) => {
+                  const header = formatDayHeader(day);
+                  const weekend = isWeekend(day);
+                  const today = day === todayDate();
+
+                  return (
+                    <Box
+                      key={day}
+                      sx={{
+                        ...(weekend ? weekendHeaderCell : weekdayHeaderCell),
+                        outline: today ? "2px solid #2563eb" : "none",
+                        outlineOffset: -2,
+                      }}
+                    >
+                      <Typography fontSize={11.5} fontWeight={900}>
+                        {header.weekday}
+                      </Typography>
+                      <Typography fontSize={13} fontWeight={950}>
+                        {header.day}
+                      </Typography>
+                    </Box>
+                  );
+                })}
+
+                {visibleServices.map((service) => (
+                  <Box key={service.id} sx={{ display: "contents" }}>
+                    <Box sx={tab === "Core" ? coreServiceCell : specialtyServiceCell}>
+                      <Stack direction="row" spacing={0.75} alignItems="center">
+                        <Box sx={serviceIconBox}>{serviceIcon(service.name)}</Box>
+                        <Typography fontWeight={850} fontSize={12.5} lineHeight={1.15}>
+                          {displayServiceName(service.name)}
+                        </Typography>
+                      </Stack>
+                    </Box>
+
+                    {weekDays.map((day) => {
+                      const assignment = findAssignmentForCell({
+                        assignments,
+                        serviceId: service.id,
+                        date: day,
+                        group: tab,
+                      });
+
+                      const weekend = isWeekend(day);
+
+                      return (
+                        <Box
+                          key={`${service.id}-${day}`}
+                          sx={{
+                            ...matrixCell,
+                            backgroundColor: assignment
+                              ? "#f0fdf4"
+                              : weekend
+                                ? "#fff7ed"
+                                : "white",
+                            cursor: allowBuild ? "pointer" : "default",
+                          }}
+                          onClick={() => {
+                            if (!allowBuild) return;
+
+                            if (assignment) {
+                              setEditingAssignment(assignment);
+                            } else {
+                              setAddingAssignment({ tab, date: day, service });
+                            }
+                          }}
+                        >
+                          {assignment ? (
+                            <Stack
+                              direction="row"
+                              alignItems="center"
+                              justifyContent="space-between"
+                              spacing={0.5}
+                            >
+                              <Box sx={{ minWidth: 0 }}>
+                                <Button
+                                  variant="text"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onOpenAttendingProfile?.(assignment.attendingId);
+                                  }}
+                                  sx={{
+                                    p: 0,
+                                    minWidth: 0,
+                                    maxWidth: "100%",
+                                    textTransform: "none",
+                                    justifyContent: "flex-start",
+                                    color: "#0f172a",
+                                    fontWeight: 850,
+                                    fontSize: 12.2,
+                                    lineHeight: 1.1,
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                    whiteSpace: "nowrap",
+                                    "&:hover": {
+                                      backgroundColor: "transparent",
+                                      textDecoration: "underline",
+                                    },
+                                  }}
+                                >
+                                  {assignment.attendingName}
+                                </Button>
+
+                                {assignment.phone && (
+                                  <Typography
+                                    variant="caption"
+                                    color="text.secondary"
+                                    fontSize={10.3}
+                                    noWrap
+                                    sx={{ display: "block" }}
+                                  >
+                                    {assignment.phone}
+                                  </Typography>
+                                )}
+                              </Box>
+
+                              {allowBuild && (
+                                <Stack
+                                  direction="row"
+                                  spacing={0.1}
+                                  sx={{ flexShrink: 0 }}
+                                  className="attending-print-hide"
+                                >
+                                  <Tooltip title="Edit">
+                                    <IconButton
+                                      size="small"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setEditingAssignment(assignment);
+                                      }}
+                                      sx={{ p: 0.2 }}
+                                    >
+                                      <EditIcon sx={{ fontSize: 14 }} />
+                                    </IconButton>
+                                  </Tooltip>
+
+                                  <Tooltip title="Delete">
+                                    <IconButton
+                                      size="small"
+                                      color="error"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDelete(assignment.id);
+                                      }}
+                                      sx={{ p: 0.2 }}
+                                    >
+                                      <DeleteIcon sx={{ fontSize: 14 }} />
+                                    </IconButton>
+                                  </Tooltip>
+                                </Stack>
+                              )}
+                            </Stack>
+                          ) : (
+                            <Typography variant="caption" color="text.secondary" fontSize={10.5}>
+                              {allowBuild ? "Assign" : "—"}
+                            </Typography>
+                          )}
+                        </Box>
+                      );
+                    })}
+                  </Box>
+                ))}
+              </Box>
+            </Box>
           )}
         </CardContent>
       </Card>
@@ -614,311 +799,6 @@ export default function AttendingCallSchedulePage() {
     </Box>
   );
 }
-
-function DesktopMatrix({
-  tab,
-  weekDays,
-  visibleServices,
-  assignments,
-  allowBuild,
-  onAdd,
-  onEdit,
-  onDelete,
-}: {
-  tab: ScheduleTab;
-  weekDays: string[];
-  visibleServices: ScheduleService[];
-  assignments: AttendingScheduleAssignment[];
-  allowBuild: boolean;
-  onAdd: (date: string, service: ScheduleService) => void;
-  onEdit: (assignment: AttendingScheduleAssignment) => void;
-  onDelete: (id: string) => void;
-}) {
-  return (
-    <Box
-      sx={{
-        display: { xs: "none", md: "block" },
-        overflow: "auto",
-        maxHeight: "calc(100vh - 205px)",
-        border: "1px solid",
-        borderColor: "divider",
-        borderRadius: 2,
-      }}
-    >
-      <Box
-        sx={{
-          display: "grid",
-          gridTemplateColumns: `180px repeat(7, minmax(105px, 1fr))`,
-          minWidth: 180 + 7 * 105,
-          width: "100%",
-        }}
-      >
-        <Box sx={topLeftCell}>Service</Box>
-
-        {weekDays.map((day) => {
-          const header = formatDayHeader(day);
-          const weekend = isWeekend(day);
-          const today = day === todayDate();
-
-          return (
-            <Box
-              key={day}
-              sx={{
-                ...(weekend ? weekendHeaderCell : weekdayHeaderCell),
-                outline: today ? "2px solid #2563eb" : "none",
-                outlineOffset: -2,
-              }}
-            >
-              <Typography fontSize={11.5} fontWeight={900}>
-                {header.weekday}
-              </Typography>
-              <Typography fontSize={13} fontWeight={950}>
-                {header.day}
-              </Typography>
-            </Box>
-          );
-        })}
-
-        {visibleServices.map((service) => (
-          <Box key={service.id} sx={{ display: "contents" }}>
-            <Box sx={tab === "Core" ? coreServiceCell : specialtyServiceCell}>
-              <Stack direction="row" spacing={0.75} alignItems="center">
-                <Box sx={serviceIconBox}>{serviceIcon(service.name)}</Box>
-                <Typography fontWeight={850} fontSize={12} lineHeight={1.15} noWrap>
-                  {service.shortName || shortServiceName(service.name)}
-                </Typography>
-              </Stack>
-            </Box>
-
-            {weekDays.map((day) => {
-              const assignment = findAssignmentForCell({
-                assignments,
-                serviceId: service.id,
-                date: day,
-                group: tab,
-              });
-
-              const weekend = isWeekend(day);
-
-              return (
-                <Box
-                  key={`${service.id}-${day}`}
-                  sx={{
-                    ...matrixCell,
-                    backgroundColor: assignment
-                      ? "#f0fdf4"
-                      : weekend
-                        ? "#fff7ed"
-                        : "white",
-                    cursor: allowBuild ? "pointer" : "default",
-                  }}
-                  onClick={() => {
-                    if (!allowBuild) return;
-
-                    if (assignment) onEdit(assignment);
-                    else onAdd(day, service);
-                  }}
-                >
-                  {assignment ? (
-                    <Stack
-                      direction="row"
-                      alignItems="center"
-                      justifyContent="space-between"
-                      spacing={0.35}
-                      sx={{ minWidth: 0 }}
-                    >
-                      <Tooltip title={assignment.attendingName}>
-                        <Typography fontWeight={850} fontSize={11.5} noWrap>
-                          {shortAttendingName(assignment.attendingName)}
-                        </Typography>
-                      </Tooltip>
-
-                      {allowBuild && (
-                        <Stack direction="row" spacing={0.1} sx={{ flexShrink: 0 }}>
-                          <Tooltip title="Edit">
-                            <IconButton
-                              size="small"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onEdit(assignment);
-                              }}
-                              sx={{ p: 0.15 }}
-                            >
-                              <EditIcon sx={{ fontSize: 13 }} />
-                            </IconButton>
-                          </Tooltip>
-
-                          <Tooltip title="Delete">
-                            <IconButton
-                              size="small"
-                              color="error"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onDelete(assignment.id);
-                              }}
-                              sx={{ p: 0.15 }}
-                            >
-                              <DeleteIcon sx={{ fontSize: 13 }} />
-                            </IconButton>
-                          </Tooltip>
-                        </Stack>
-                      )}
-                    </Stack>
-                  ) : (
-                    <Typography variant="caption" color="text.secondary" fontSize={10.5}>
-                      {allowBuild ? "Assign" : "—"}
-                    </Typography>
-                  )}
-                </Box>
-              );
-            })}
-          </Box>
-        ))}
-      </Box>
-    </Box>
-  );
-}
-
-function MobileCards({
-  tab,
-  weekDays,
-  visibleServices,
-  assignments,
-  allowBuild,
-  onAdd,
-  onEdit,
-  onDelete,
-}: {
-  tab: ScheduleTab;
-  weekDays: string[];
-  visibleServices: ScheduleService[];
-  assignments: AttendingScheduleAssignment[];
-  allowBuild: boolean;
-  onAdd: (date: string, service: ScheduleService) => void;
-  onEdit: (assignment: AttendingScheduleAssignment) => void;
-  onDelete: (id: string) => void;
-}) {
-  return (
-    <Stack spacing={1} sx={{ display: { xs: "flex", md: "none" } }}>
-      {visibleServices.map((service) => (
-        <Box
-          key={service.id}
-          sx={{
-            border: "1px solid",
-            borderColor: "divider",
-            borderRadius: 2,
-            overflow: "hidden",
-            backgroundColor: tab === "Core" ? "#eff6ff" : "#f5f3ff",
-          }}
-        >
-          <Stack direction="row" spacing={0.75} alignItems="center" sx={{ p: 0.8 }}>
-            <Box sx={serviceIconBox}>{serviceIcon(service.name)}</Box>
-            <Typography fontWeight={900} fontSize={13} noWrap>
-              {service.shortName || shortServiceName(service.name)}
-            </Typography>
-          </Stack>
-
-          {weekDays.map((day, index) => {
-            const header = formatDayHeader(day);
-            const weekend = isWeekend(day);
-            const today = day === todayDate();
-
-            const assignment = findAssignmentForCell({
-              assignments,
-              serviceId: service.id,
-              date: day,
-              group: tab,
-            });
-
-            return (
-              <Box
-                key={`${service.id}-${day}`}
-                sx={{
-                  display: "grid",
-                  gridTemplateColumns: "58px 1fr 44px",
-                  alignItems: "center",
-                  gap: 0.5,
-                  minHeight: 34,
-                  px: 0.8,
-                  py: 0.45,
-                  borderTop: "1px solid",
-                  borderColor: "divider",
-                  backgroundColor: assignment
-                    ? "#ffffff"
-                    : weekend
-                      ? "#fff7ed"
-                      : index % 2 === 0
-                        ? "#ffffff"
-                        : "#f8fafc",
-                  outline: today ? "2px solid #2563eb" : "none",
-                  outlineOffset: -2,
-                  cursor: allowBuild ? "pointer" : "default",
-                }}
-                onClick={() => {
-                  if (!allowBuild) return;
-                  if (assignment) onEdit(assignment);
-                  else onAdd(day, service);
-                }}
-              >
-                <Typography fontSize={11.5} fontWeight={900} color={weekend ? "#c2410c" : "text.secondary"}>
-                  {header.weekday} {header.day}
-                </Typography>
-
-                <Typography fontSize={12.5} fontWeight={850} noWrap color={assignment ? "text.primary" : "text.secondary"}>
-                  {assignment ? assignment.attendingName : allowBuild ? "Assign" : "—"}
-                </Typography>
-
-                {assignment && allowBuild ? (
-                  <Stack direction="row" spacing={0.1}>
-                    <IconButton
-                      size="small"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onEdit(assignment);
-                      }}
-                      sx={{ p: 0.2 }}
-                    >
-                      <EditIcon sx={{ fontSize: 14 }} />
-                    </IconButton>
-
-                    <IconButton
-                      size="small"
-                      color="error"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onDelete(assignment.id);
-                      }}
-                      sx={{ p: 0.2 }}
-                    >
-                      <DeleteIcon sx={{ fontSize: 14 }} />
-                    </IconButton>
-                  </Stack>
-                ) : (
-                  <Box />
-                )}
-              </Box>
-            );
-          })}
-        </Box>
-      ))}
-    </Stack>
-  );
-}
-
-const compactAlertSx = {
-  mb: { xs: 1, md: 1.5 },
-  borderRadius: 2,
-  py: { xs: 0.25, md: 0.75 },
-  px: { xs: 1, md: 2 },
-  "& .MuiAlert-icon": {
-    fontSize: { xs: 20, md: 24 },
-    mr: { xs: 1, md: 1.5 },
-  },
-  "& .MuiAlert-message": {
-    fontSize: { xs: 13, md: 14 },
-    py: { xs: 0.35, md: 0.5 },
-  },
-};
 
 function AttendingScheduleDialog({
   open,
@@ -1012,6 +892,11 @@ function AttendingScheduleDialog({
   async function handleSave() {
     if (!service || !attending) return;
 
+    if (endDate < startDate) {
+      window.alert("End date cannot be before start date.");
+      return;
+    }
+
     setSaving(true);
     try {
       await onSave({
@@ -1045,7 +930,6 @@ function AttendingScheduleDialog({
             onChange={(_, value) => handleServiceChange(value)}
             getOptionLabel={(option) => displayServiceName(option.name)}
             isOptionEqualToValue={(option, value) => option.id === value.id}
-            disabled={tab === "Core" && Boolean(defaultService)}
             renderInput={(params) => <TextField {...params} label="Service" />}
           />
 
@@ -1072,25 +956,29 @@ function AttendingScheduleDialog({
 
           <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
             <TextField
-              label={tab === "Core" ? "Date" : "Start Date"}
+              label="Start Date"
               type="date"
               value={startDate}
               onChange={(e) => {
                 setStartDate(e.target.value);
-                if (tab === "Core") setEndDate(e.target.value);
+                if (endDate < e.target.value) setEndDate(e.target.value);
               }}
               InputLabelProps={{ shrink: true }}
               fullWidth
             />
 
             <TextField
-              label={tab === "Core" ? "Same Date" : "End Date"}
+              label="End Date"
               type="date"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
               InputLabelProps={{ shrink: true }}
-              disabled={tab === "Core"}
               fullWidth
+              helperText={
+                tab === "Core"
+                  ? "Core/admitting can now be added for a date range."
+                  : "Consult service coverage date range."
+              }
             />
           </Stack>
 
@@ -1160,7 +1048,7 @@ function AttendingScheduleDialog({
 }
 
 const topLeftCell = {
-  p: 0.5,
+  p: 0.55,
   fontWeight: 900,
   fontSize: 12,
   backgroundColor: "#e2e8f0",
@@ -1171,10 +1059,13 @@ const topLeftCell = {
   top: 0,
   left: 0,
   zIndex: 5,
+  "@media print": {
+    position: "static",
+  },
 };
 
 const weekdayHeaderCell = {
-  p: 0.5,
+  p: 0.55,
   backgroundColor: "#e2e8f0",
   borderRight: "1px solid",
   borderBottom: "1px solid",
@@ -1183,6 +1074,9 @@ const weekdayHeaderCell = {
   top: 0,
   zIndex: 3,
   textAlign: "center",
+  "@media print": {
+    position: "static",
+  },
 };
 
 const weekendHeaderCell = {
@@ -1191,7 +1085,7 @@ const weekendHeaderCell = {
 };
 
 const coreServiceCell = {
-  p: 0.5,
+  p: 0.55,
   backgroundColor: "#eff6ff",
   borderRight: "1px solid",
   borderBottom: "1px solid",
@@ -1199,7 +1093,9 @@ const coreServiceCell = {
   position: "sticky",
   left: 0,
   zIndex: 2,
-  minWidth: 0,
+  "@media print": {
+    position: "static",
+  },
 };
 
 const specialtyServiceCell = {
@@ -1221,14 +1117,17 @@ const serviceIconBox = {
 };
 
 const matrixCell = {
-  minHeight: 34,
-  p: 0.4,
+  minHeight: 42,
+  p: 0.45,
   borderRight: "1px solid",
   borderBottom: "1px solid",
   borderColor: "divider",
   backgroundColor: "white",
-  minWidth: 0,
   "&:hover": {
     backgroundColor: "#f8fafc",
+  },
+  "@media print": {
+    minHeight: 34,
+    p: 0.35,
   },
 };

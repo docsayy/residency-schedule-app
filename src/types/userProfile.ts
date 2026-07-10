@@ -18,5 +18,6 @@ export interface UserProfile {
   phone?: string;
   inviteCode?: string;
   createdAt: string;
+  updatedAt?: string;
   lastLogin?: string;
 }

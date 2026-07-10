@@ -355,8 +355,10 @@ function isActiveOnDate(assignment: AttendingScheduleAssignment, date: string) {
 
 export default function WhosOnPage({
   onOpenResidentProfile,
+  onOpenAttendingProfile,
 }: {
   onOpenResidentProfile?: (residentId: string) => void;
+  onOpenAttendingProfile?: (attendingId: string) => void;
 }) {
   const { profile } = useAuth();
   const allowBuild = canBuildSchedule(profile?.role);
@@ -432,6 +434,16 @@ export default function WhosOnPage({
       : undefined;
 
     return assignment.phone || profileById?.phone || profileByName?.phone || "—";
+  }
+
+  function getAttendingId(assignment: AttendingScheduleAssignment) {
+    if (assignment.attendingId && attendingsById[assignment.attendingId]) {
+      return assignment.attendingId;
+    }
+
+    return assignment.attendingName
+      ? attendingByName[normalizeText(assignment.attendingName)]?.id || ""
+      : "";
   }
 
   const currentBlock = useMemo(() => {
@@ -642,6 +654,7 @@ export default function WhosOnPage({
       .map((assignment) => ({
         specialty: shortenSpecialtyName(assignment.serviceName),
         consultant: assignment.attendingName,
+        attendingId: getAttendingId(assignment),
         coverage: assignment.coverageNote || `${assignment.coverageStartTime}-${assignment.coverageEndTime}`,
         phone: getAttendingPhone(assignment),
       }));
@@ -660,6 +673,7 @@ export default function WhosOnPage({
       .map((assignment) => ({
         specialty: shortenSpecialtyName(assignment.serviceName),
         consultant: assignment.attendingName,
+        attendingId: getAttendingId(assignment),
         coverage: assignment.coverageNote || `${assignment.coverageStartTime}-${assignment.coverageEndTime}`,
         phone: getAttendingPhone(assignment),
       }));
@@ -692,6 +706,10 @@ export default function WhosOnPage({
   function openResidentByName(name: string, residentId?: string) {
     const id = residentId || residentIdByName[normalizeText(name)];
     if (id) onOpenResidentProfile?.(id);
+  }
+
+  function openAttending(attendingId: string) {
+    if (attendingId) onOpenAttendingProfile?.(attendingId);
   }
 
   return (
@@ -917,9 +935,9 @@ export default function WhosOnPage({
           ) : mode === "all" ? (
             <AllServicesTable rows={allServiceRows} onOpenResident={openResidentByName} />
           ) : mode === "admitting" ? (
-            <AttendingServicesTable rows={admittingRows} emptyMessage="No admitting attending coverage found for this date." />
+            <AttendingServicesTable rows={admittingRows} emptyMessage="No admitting attending coverage found for this date." onOpenAttending={openAttending} />
           ) : (
-            <AttendingServicesTable rows={consultingRows} emptyMessage="No consulting coverage found for this date." />
+            <AttendingServicesTable rows={consultingRows} emptyMessage="No consulting coverage found for this date." onOpenAttending={openAttending} />
           )}
         </CardContent>
       </Card>
@@ -1119,9 +1137,17 @@ function AllServicesTable({
 function AttendingServicesTable({
   rows,
   emptyMessage,
+  onOpenAttending,
 }: {
-  rows: { specialty: string; consultant: string; coverage: string; phone: string }[];
+  rows: {
+    specialty: string;
+    consultant: string;
+    attendingId: string;
+    coverage: string;
+    phone: string;
+  }[];
   emptyMessage: string;
+  onOpenAttending: (attendingId: string) => void;
 }) {
   return (
     <TableShell
@@ -1146,9 +1172,32 @@ function AttendingServicesTable({
           index={index}
         >
           <ServiceCell label={row.specialty} />
-          <Typography fontSize={{ xs: 12.5, md: 13.5 }} fontWeight={700} sx={{ px: { xs: 0.5, md: 1 } }} noWrap>
+          <Button
+            variant="text"
+            disabled={!row.attendingId}
+            onClick={() => onOpenAttending(row.attendingId)}
+            sx={{
+              p: 0,
+              minWidth: 0,
+              maxWidth: "100%",
+              justifyContent: "flex-start",
+              textTransform: "none",
+              fontSize: { xs: 12.5, md: 13.5 },
+              fontWeight: 700,
+              color: row.consultant ? "#0f172a" : "text.secondary",
+              fontStyle: row.consultant ? "normal" : "italic",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+              "&.Mui-disabled": { color: row.consultant ? "#0f172a" : "text.secondary" },
+              "&:hover": {
+                backgroundColor: "transparent",
+                textDecoration: row.attendingId ? "underline" : "none",
+              },
+            }}
+          >
             {row.consultant || "Unassigned"}
-          </Typography>
+          </Button>
           <Box sx={{ display: { xs: "none", md: "block" } }}>
             <Chip label={row.coverage} size="small" sx={{ width: "fit-content", maxWidth: "100%", fontWeight: 800, fontSize: 12, height: 24, ...coverageBadgeColor(row.coverage) }} />
           </Box>

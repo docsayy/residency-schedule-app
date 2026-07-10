@@ -11,10 +11,15 @@ function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
 }
 
+function removeUndefinedFields<T extends Record<string, unknown>>(value: T) {
+  return Object.fromEntries(
+    Object.entries(value).filter(([, fieldValue]) => fieldValue !== undefined)
+  ) as T;
+}
+
 export function isSuperAdminEmail(email: string) {
-  return SUPER_ADMIN_EMAILS.map((item) => item.toLowerCase()).includes(
-    normalizeEmail(email)
-  );
+  const cleanEmail = normalizeEmail(email);
+  return SUPER_ADMIN_EMAILS.map((item) => item.toLowerCase()).includes(cleanEmail);
 }
 
 export async function getUserProfile(uid: string): Promise<UserProfile | null> {
@@ -38,6 +43,7 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
     phone: data.phone,
     inviteCode: data.inviteCode,
     createdAt: data.createdAt || new Date().toISOString(),
+    updatedAt: data.updatedAt,
     lastLogin: data.lastLogin,
   };
 }
@@ -65,8 +71,14 @@ export async function findApprovedPersonByEmail(email: string): Promise<{
   );
 
   if (resident) {
+    const canLogin = (resident as unknown as { canLogin?: boolean }).canLogin;
+
     if (!resident.active) {
       throw new Error("Your resident profile exists but is inactive.");
+    }
+
+    if (canLogin === false) {
+      throw new Error("Your resident profile exists, but Can Login is turned off.");
     }
 
     return {
@@ -83,8 +95,14 @@ export async function findApprovedPersonByEmail(email: string): Promise<{
   );
 
   if (attending) {
+    const canLogin = (attending as unknown as { canLogin?: boolean }).canLogin;
+
     if (!attending.active) {
       throw new Error("Your attending profile exists but is inactive.");
+    }
+
+    if (canLogin === false) {
+      throw new Error("Your attending profile exists, but Can Login is turned off.");
     }
 
     return {
@@ -95,7 +113,9 @@ export async function findApprovedPersonByEmail(email: string): Promise<{
     };
   }
 
-  throw new Error("No matching resident, attending, or admin authorization was found.");
+  throw new Error(
+    "No matching resident, attending, or admin authorization was found for this email."
+  );
 }
 
 export async function createUserProfile(params: {
@@ -109,7 +129,9 @@ export async function createUserProfile(params: {
   inviteCode?: string;
   emailVerified?: boolean;
 }) {
-  const profile: UserProfile = {
+  const now = new Date().toISOString();
+
+  const profile = removeUndefinedFields({
     uid: params.uid,
     email: normalizeEmail(params.email),
     displayName: params.displayName,
@@ -121,20 +143,32 @@ export async function createUserProfile(params: {
     attendingId: params.attendingId,
     phone: params.phone,
     inviteCode: params.inviteCode,
-    createdAt: new Date().toISOString(),
-  };
+    createdAt: now,
+    updatedAt: now,
+  });
 
   await setDoc(doc(db, "users", params.uid), profile, { merge: true });
-  return profile;
+
+  return {
+    ...(profile as unknown as UserProfile),
+    createdAt: String(profile.createdAt),
+  };
 }
 
 export async function ensureSuperAdminProfile(params: {
   uid: string;
   email: string;
 }) {
+  const cleanEmail = normalizeEmail(params.email);
+
+  if (!isSuperAdminEmail(cleanEmail)) return null;
+
+  const existingProfile = await getUserProfile(params.uid);
+  if (existingProfile) return existingProfile;
+
   return createUserProfile({
     uid: params.uid,
-    email: params.email,
+    email: cleanEmail,
     displayName: "Super Admin",
     role: "Admin",
     emailVerified: true,
@@ -142,14 +176,20 @@ export async function ensureSuperAdminProfile(params: {
 }
 
 export async function updateUserRole(uid: string, role: AppRole) {
-  await updateDoc(doc(db, "users", uid), { role });
+  await updateDoc(doc(db, "users", uid), {
+    role,
+    updatedAt: new Date().toISOString(),
+  });
 }
 
 export async function updateUserLoginState(
   uid: string,
   data: Partial<Pick<UserProfile, "emailVerified" | "lastLogin">>
 ) {
-  await updateDoc(doc(db, "users", uid), data);
+  await updateDoc(doc(db, "users", uid), {
+    ...data,
+    updatedAt: new Date().toISOString(),
+  });
 }
 
 export async function repairUserProfileLink(
@@ -162,14 +202,17 @@ export async function repairUserProfileLink(
     emailVerified?: boolean;
   }
 ) {
-  await updateDoc(doc(db, "users", uid), {
-    displayName: data.displayName,
-    role: data.role,
-    residentId: data.residentId,
-    attendingId: data.attendingId,
-    approved: true,
-    active: true,
-    emailVerified: data.emailVerified !== false,
-    updatedAt: new Date().toISOString(),
-  });
+  await updateDoc(
+    doc(db, "users", uid),
+    removeUndefinedFields({
+      displayName: data.displayName,
+      role: data.role,
+      residentId: data.residentId,
+      attendingId: data.attendingId,
+      approved: true,
+      active: true,
+      emailVerified: data.emailVerified !== false,
+      updatedAt: new Date().toISOString(),
+    })
+  );
 }

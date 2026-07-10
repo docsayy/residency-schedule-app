@@ -6,7 +6,7 @@ import {
   signOut,
   type User,
 } from "firebase/auth";
-import { createContext, useContext, useEffect, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 
 import { auth } from "../config/firebase";
 import { getInviteByCode, markInviteUsed } from "../services/inviteService";
@@ -14,7 +14,6 @@ import {
   createUserProfile,
   ensureSuperAdminProfile,
   getUserProfile,
-  isSuperAdminEmail,
   updateUserLoginState,
 } from "../services/userService";
 import type { InviteCode } from "../types/inviteCode";
@@ -33,8 +32,9 @@ type AuthContextValue = {
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   signup: (params: SignupParams) => Promise<void>;
+  previewInvite: (code: string) => Promise<InviteCode>;
   resetPassword: (email: string) => Promise<void>;
-  previewInvite: (inviteCode: string) => Promise<InviteCode>;
+  resendVerification: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
 };
 
@@ -42,6 +42,15 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
+}
+
+function isEmailAlreadyInUse(err: unknown) {
+  const text = err instanceof Error ? err.message : String(err);
+  return text.includes("auth/email-already-in-use");
+}
+
+function formatLoginProblem(parts: string[]) {
+  return `Unable to sign in:\n\n${parts.map((item) => `• ${item}`).join("\n")}`;
 }
 
 function withLoginState(profile: UserProfile): UserProfile {
@@ -52,10 +61,42 @@ function withLoginState(profile: UserProfile): UserProfile {
   };
 }
 
-function requireActiveProfile(profile: UserProfile | null) {
-  if (!profile) throw new Error("No WhosOn profile was found for this account.");
-  if (!profile.active) throw new Error("Your WhosOn profile is inactive.");
-  if (!profile.approved) throw new Error("Your WhosOn profile is not approved yet.");
+async function safeUpdateLoginState(uid: string, updatedProfile: UserProfile) {
+  try {
+    await updateUserLoginState(uid, {
+      emailVerified: true,
+      lastLogin: updatedProfile.lastLogin,
+    });
+  } catch (err) {
+    console.warn("Unable to update login timestamp.", err);
+  }
+}
+
+async function safeMarkInviteUsed(params: {
+  code: string;
+  uid: string;
+  email: string;
+}) {
+  try {
+    await markInviteUsed(params);
+  } catch (err) {
+    console.warn("Account profile was created, but invite could not be marked used.", err);
+  }
+}
+
+async function loadUsableProfile(firebaseUser: User) {
+  const cleanEmail = normalizeEmail(firebaseUser.email || "");
+
+  let userProfile = await getUserProfile(firebaseUser.uid);
+
+  if (!userProfile && cleanEmail) {
+    userProfile = await ensureSuperAdminProfile({
+      uid: firebaseUser.uid,
+      email: cleanEmail,
+    });
+  }
+
+  return userProfile;
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -63,96 +104,111 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const authActionInProgress = useRef(false);
-
-  async function loadProfileForUser(firebaseUser: User) {
-    let userProfile = await getUserProfile(firebaseUser.uid);
-
-    if (!userProfile && firebaseUser.email && isSuperAdminEmail(firebaseUser.email)) {
-      userProfile = await ensureSuperAdminProfile({
-        uid: firebaseUser.uid,
-        email: firebaseUser.email,
-      });
-    }
-
-    requireActiveProfile(userProfile);
-
-    const updatedProfile = withLoginState(userProfile!);
-
-    await updateUserLoginState(firebaseUser.uid, {
-      emailVerified: true,
-      lastLogin: updatedProfile.lastLogin,
-    });
-
-    setUser(firebaseUser);
-    setProfile(updatedProfile);
-
-    return updatedProfile;
-  }
-
   async function login(email: string, password: string) {
-    try {
-      authActionInProgress.current = true;
+    const cleanEmail = normalizeEmail(email);
 
-      const credential = await signInWithEmailAndPassword(
-        auth,
-        normalizeEmail(email),
-        password
+    const credential = await signInWithEmailAndPassword(
+      auth,
+      cleanEmail,
+      password
+    );
+
+    const userProfile = await loadUsableProfile(credential.user);
+    const problems: string[] = [];
+
+    if (!userProfile) {
+      problems.push(
+        "No WhosOn user profile was found for this Firebase account. Please ask an admin to send an invite or repair the account."
       );
-
-      await loadProfileForUser(credential.user);
-    } finally {
-      authActionInProgress.current = false;
+    } else {
+      if (!userProfile.active) problems.push("Your app user profile is inactive.");
+      if (!userProfile.approved) problems.push("Your app user profile is not approved.");
     }
+
+    if (problems.length > 0 || !userProfile) {
+      await signOut(auth);
+      setUser(null);
+      setProfile(null);
+      throw new Error(formatLoginProblem(problems));
+    }
+
+    const updatedProfile = withLoginState(userProfile);
+
+    await safeUpdateLoginState(credential.user.uid, updatedProfile);
+
+    setUser(credential.user);
+    setProfile(updatedProfile);
   }
 
-  async function previewInvite(inviteCode: string) {
-    return getInviteByCode(inviteCode);
+  async function previewInvite(code: string) {
+    return getInviteByCode(code);
   }
 
   async function signup(params: SignupParams) {
+    const cleanEmail = normalizeEmail(params.email);
+    const cleanCode = params.inviteCode.trim().toUpperCase();
+
+    if (!cleanEmail) throw new Error("Please enter your email.");
+    if (!params.password) throw new Error("Please enter your password.");
+    if (!cleanCode) throw new Error("Please enter your invite code.");
+    if (!params.phone.trim()) throw new Error("Please enter your phone number.");
+
+    const invite = await getInviteByCode(cleanCode);
+
+    let credential: Awaited<ReturnType<typeof createUserWithEmailAndPassword>>;
+
     try {
-      authActionInProgress.current = true;
-
-      const cleanEmail = normalizeEmail(params.email);
-      const cleanCode = params.inviteCode.trim().toUpperCase();
-
-      const invite = await getInviteByCode(cleanCode);
-
-      const credential = await createUserWithEmailAndPassword(
+      credential = await createUserWithEmailAndPassword(
         auth,
         cleanEmail,
         params.password
       );
+    } catch (err) {
+      if (!isEmailAlreadyInUse(err)) throw err;
 
-      await createUserProfile({
-        uid: credential.user.uid,
-        email: cleanEmail,
-        displayName: invite.displayName,
-        role: invite.role,
-        residentId: invite.residentId,
-        attendingId: invite.attendingId,
-        phone: params.phone.trim(),
-        inviteCode: cleanCode,
-        emailVerified: true,
-      });
-
-      await markInviteUsed({
-        code: cleanCode,
-        uid: credential.user.uid,
-        email: cleanEmail,
-      });
-
-      await loadProfileForUser(credential.user);
-    } finally {
-      authActionInProgress.current = false;
+      credential = await signInWithEmailAndPassword(
+        auth,
+        cleanEmail,
+        params.password
+      );
     }
+
+    const userProfile = await createUserProfile({
+      uid: credential.user.uid,
+      email: cleanEmail,
+      displayName: invite.displayName,
+      role: invite.role,
+      residentId: invite.residentId,
+      attendingId: invite.attendingId,
+      phone: params.phone.trim(),
+      inviteCode: cleanCode,
+      emailVerified: true,
+    });
+
+    await safeMarkInviteUsed({
+      code: cleanCode,
+      uid: credential.user.uid,
+      email: cleanEmail,
+    });
+
+    const updatedProfile = withLoginState(userProfile);
+
+    await safeUpdateLoginState(credential.user.uid, updatedProfile);
+
+    setUser(credential.user);
+    setProfile(updatedProfile);
   }
 
   async function resetPassword(email: string) {
     const cleanEmail = normalizeEmail(email);
-    if (!cleanEmail) throw new Error("Please enter your email first.");
     await sendPasswordResetEmail(auth, cleanEmail);
+  }
+
+  async function resendVerification(email: string, password: string) {
+    const cleanEmail = normalizeEmail(email);
+    await signInWithEmailAndPassword(auth, cleanEmail, password);
+    await signOut(auth);
+    throw new Error("Email verification is not required for WhosOn signup.");
   }
 
   async function logout() {
@@ -163,8 +219,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (authActionInProgress.current) return;
-
       try {
         setLoading(true);
 
@@ -174,9 +228,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return;
         }
 
-        await loadProfileForUser(firebaseUser);
+        const userProfile = await loadUsableProfile(firebaseUser);
+
+        if (!userProfile || !userProfile.active || !userProfile.approved) {
+          setUser(null);
+          setProfile(null);
+          await signOut(auth);
+          return;
+        }
+
+        const updatedProfile = withLoginState(userProfile);
+        await safeUpdateLoginState(firebaseUser.uid, updatedProfile);
+
+        setUser(firebaseUser);
+        setProfile(updatedProfile);
       } catch (err) {
-        console.error("Auth profile load failed:", err);
+        console.error(err);
         setUser(null);
         setProfile(null);
         await signOut(auth);
@@ -196,8 +263,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         loading,
         login,
         signup,
-        resetPassword,
         previewInvite,
+        resetPassword,
+        resendVerification,
         logout,
       }}
     >
@@ -208,6 +276,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 export function useAuth() {
   const value = useContext(AuthContext);
-  if (!value) throw new Error("useAuth must be used inside AuthProvider");
+
+  if (!value) {
+    throw new Error("useAuth must be used inside AuthProvider");
+  }
+
   return value;
 }

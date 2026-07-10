@@ -11,6 +11,7 @@ import PhoneDirectoryPage from "./pages/PhoneDirectoryPage";
 import ResidentsPage from "./pages/ResidentsPage";
 import AttendingsPage from "./pages/AttendingsPage";
 import AttendingCallSchedulePage from "./pages/AttendingCallSchedulePage";
+import AttendingProfilePage from "./pages/AttendingProfilePage";
 import MonthlyScheduleMatrixPage from "./pages/MonthlyScheduleMatrixPage";
 import BlockSchedulePage from "./pages/BlockSchedulePage";
 import ResidentScheduleProfilePage from "./pages/ResidentScheduleProfilePage";
@@ -40,6 +41,9 @@ function AppContent() {
   const [selectedResidentId, setSelectedResidentId] = useState<string | null>(
     null
   );
+  const [selectedAttendingId, setSelectedAttendingId] = useState<string | null>(
+    null
+  );
 
   if (loading) {
     return (
@@ -61,6 +65,7 @@ function AppContent() {
   function handlePageChange(page: AppPage) {
     setCurrentPage(page);
     setSelectedResidentId(null);
+    setSelectedAttendingId(null);
   }
 
   const pageContent = selectedResidentId ? (
@@ -68,15 +73,31 @@ function AppContent() {
       residentId={selectedResidentId}
       onBack={() => setSelectedResidentId(null)}
     />
+  ) : selectedAttendingId ? (
+    <AttendingProfilePage
+      attendingId={selectedAttendingId}
+      onBack={() => setSelectedAttendingId(null)}
+    />
   ) : (
     {
-      "whos-on": <WhosOnPage onOpenResidentProfile={setSelectedResidentId} />,
+      "whos-on": (
+        <WhosOnPage
+          onOpenResidentProfile={setSelectedResidentId}
+          onOpenAttendingProfile={setSelectedAttendingId}
+        />
+      ),
       directory: <PhoneDirectoryPage />,
       residents: (
         <ResidentsPage onOpenResidentProfile={setSelectedResidentId} />
       ),
-      attendings: <AttendingsPage />,
-      "attending-call-schedule": <AttendingCallSchedulePage />,
+      attendings: (
+        <AttendingsPage onOpenAttendingProfile={setSelectedAttendingId} />
+      ),
+      "attending-call-schedule": (
+        <AttendingCallSchedulePage
+          onOpenAttendingProfile={setSelectedAttendingId}
+        />
+      ),
       schedule: (
         <MonthlyScheduleMatrixPage
           onOpenResidentProfile={setSelectedResidentId}
